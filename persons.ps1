@@ -135,6 +135,9 @@ function Get-RaetPersonDataList {
         $jobProfiles = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/jobProfiles"
         $jobProfiles = $jobProfiles | Select-Object * -ExcludeProperty extensions
         
+        $assignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/assignments"
+        #$roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
+
         # Extend the persons model
         $persons | Add-Member -MemberType NoteProperty -Name "BusinessEmailAddress" -Value $null -Force
         $persons | Add-Member -MemberType NoteProperty -Name "PrivateEmailAddress" -Value $null -Force
@@ -152,18 +155,20 @@ function Get-RaetPersonDataList {
                 $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName;
                                                             
                 $contracts = @();                    
-                foreach ($employment in $person.employments) {                                        
-                            
-                    foreach ($assignment in $person.assignments) {
-                                
+                foreach ($employment in $person.employments) { 
+                         
                         $fullName = $null
-                        if (![string]::IsNullOrEmpty($assignment.jobProfile)) {
+                        if (![string]::IsNullOrEmpty($employment.jobProfile)) {
                             foreach ($item in $jobProfiles) {
-                                if ($item.shortName -eq $assignment.jobProfile) {                                                               
+                                if ($item.shortName -eq $employment.jobProfile) {                                                               
                                     $fullName = $item.fullName
                                     break
                                 }
                             }
+
+                            $personAssignments = $assignments | Select * | Where personCode -eq $person.personCode
+
+                            foreach($assignment in $personAssignments){
 
                             if (![string]::IsNullOrEmpty($assignment)) {
                                 if ($assignment.employmentCode -eq $employment.employmentCode) {
@@ -182,7 +187,7 @@ function Get-RaetPersonDataList {
                                         DischargeDate    = $employment.dischargeDate
                                         HireDate         = $employment.hireDate
                                         JobProfile       = @{
-                                            ShortName = $employment.jobProfile
+                                            ShortName = $assignment.jobProfile
                                             FullName  = $fullName
                                         }
                                         WorkingAmount    = @{
@@ -191,7 +196,7 @@ function Get-RaetPersonDataList {
                                             PeriodOfWork = $assignment.workingAmount.periodOfWork
                                         }
                                         OrganizationUnit = @{
-                                            ShortName = $employment.organizationUnit
+                                            ShortName = $assignment.organizationUnit
                                             FullName  = $null
                                         }
                                     }
@@ -200,7 +205,8 @@ function Get-RaetPersonDataList {
                                 }
                             }
                         }
-                    }    
+                        } 
+ 
                     $person | Add-Member -Name "Contracts" -MemberType NoteProperty -Value $contracts -Force;
 
                     # Add emailAddresses to the person

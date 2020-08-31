@@ -123,16 +123,20 @@ function Get-RaetOrganizationUnitsList {
 
     try {
         $organizationalUnits = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/organizationUnits"
+        $roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
         $managerActiveCompareDate = Get-Date
 
         Write-Verbose -Verbose "Department import starting";
         $departments = @();
         foreach($item in $organizationalUnits)
         {
+            
+            $ouRoleAssignments = $roleAssignments | Select * | Where organizationUnit -eq $item.id
+
             $managerId = $null;
-            foreach ($roleAssignment in $item.roleAssignments) {
+            foreach ($roleAssignment in $ouRoleAssignments) {
                 if (![string]::IsNullOrEmpty($roleAssignment)) {
-                    if ($roleAssignment.roleShortName -eq 'MGR') {
+                    if ($roleAssignment.ShortName -eq 'MGR') {
                         if($managerActiveCompareDate -ge $roleAssignment.startDate -and $roleAssignment.endDate -le $managerActiveCompareDate ){
                             $managerId = $roleAssignment.personCode
                             break
