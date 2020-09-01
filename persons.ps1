@@ -136,7 +136,18 @@ function Get-RaetPersonDataList {
         $jobProfiles = $jobProfiles | Select-Object * -ExcludeProperty extensions
         
         $assignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/assignments"
-        #$roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
+        $assignmentHashtable = @{}
+        foreach ($record in $assignments) {
+            $tmpKey = $record.personCode + "_" + $record.employmentCode
+ 
+            if (![string]::IsNullOrEmpty($tmpKey)) {
+                if($assignmentHashtable.Contains($tmpKey)) {
+                    $assignmentHashtable.$tmpKey += ($record)
+                } else {
+                    $assignmentHashtable.Add($tmpKey, @($record))
+                } 
+            }
+        }         
 
         # Extend the persons model
         $persons | Add-Member -MemberType NoteProperty -Name "BusinessEmailAddress" -Value $null -Force
@@ -156,20 +167,21 @@ function Get-RaetPersonDataList {
                                                             
                 $contracts = @();                    
                 foreach ($employment in $person.employments) { 
-                         
+                
+                             
                         $fullName = $null
                         if (![string]::IsNullOrEmpty($employment.jobProfile)) {
-                            foreach ($item in $jobProfiles) {
+                            $jobProfilesPerEmployment = $jobProfiles | Select-Object * | Where-Object shortName -eq $employment.jobProfile
+                            foreach ($item in $jobProfilesPerEmployment) {
                                 if ($item.shortName -eq $employment.jobProfile) {                                                               
                                     $fullName = $item.fullName
                                     break
                                 }
                             }
 
-                            $personAssignments = $assignments | Select * | Where personCode -eq $person.personCode
-
+                            $lookingFor = $person.personCode + "_" + $employment.employmentCode
+                            $personAssignments = $assignmentHashtable.$lookingFor
                             foreach($assignment in $personAssignments){
-
                             if (![string]::IsNullOrEmpty($assignment)) {
                                 if ($assignment.employmentCode -eq $employment.employmentCode) {
                                                                                                                         
