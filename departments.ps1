@@ -130,15 +130,16 @@ function Get-RaetOrganizationUnitsList {
         $departments = @();
         foreach($item in $organizationalUnits)
         {
-            
+         
             $ouRoleAssignments = $roleAssignments | Select * | Where organizationUnit -eq $item.id
-
+            #If($ouRoleAssignments.organizationUnit -eq 564)
             $managerId = $null;
             foreach ($roleAssignment in $ouRoleAssignments) {
                 if (![string]::IsNullOrEmpty($roleAssignment)) {
                     if ($roleAssignment.ShortName -eq 'MGR') {
                         if($managerActiveCompareDate -ge $roleAssignment.startDate -and $roleAssignment.endDate -le $managerActiveCompareDate ){
                             $managerId = $roleAssignment.personCode
+                            $ExternalIdOu = $roleAssignment.organizationUnit
                             break
                         }
                     }
@@ -146,11 +147,11 @@ function Get-RaetOrganizationUnitsList {
             }   
 
             $organizationUnit = [PSCustomObject]@{
-                ExternalId=$item.shortName
+                ExternalId=$ExternalIdOu
                 DisplayName=$item.fullName
                 ManagerExternalId=$managerId
                 ParentExternalId=$item.parentOrgUnit
-            } 
+            }
             $departments += $organizationUnit;
         }
         Write-Verbose -Verbose "Department import completed";
