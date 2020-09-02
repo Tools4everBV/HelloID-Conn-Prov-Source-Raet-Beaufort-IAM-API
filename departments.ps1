@@ -132,8 +132,9 @@ function Get-RaetOrganizationUnitsList {
         {
          
             $ouRoleAssignments = $roleAssignments | Select * | Where organizationUnit -eq $item.id
-            #If($ouRoleAssignments.organizationUnit -eq 564)
+
             $managerId = $null;
+            $ExternalIdOu = $null;
             foreach ($roleAssignment in $ouRoleAssignments) {
                 if (![string]::IsNullOrEmpty($roleAssignment)) {
                     if ($roleAssignment.ShortName -eq 'MGR') {
