@@ -83,10 +83,6 @@ function Invoke-RaetWebRequestList {
         $Url
     )
     try {
-        $accessTokenValid = Confirm-AccessTokenIsValid
-        if ($accessTokenValid -ne $true) {
-            New-RaetSession -ClientId $clientId -ClientSecret $clientSecret
-        }
 
         [System.Collections.ArrayList]$ReturnValue = @()
         $counter = 0 
@@ -96,6 +92,10 @@ function Invoke-RaetWebRequestList {
             }    
             $counter++
             [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+            $accessTokenValid = Confirm-AccessTokenIsValid
+            if ($accessTokenValid -ne $true) {
+                New-RaetSession -ClientId $clientId -ClientSecret $clientSecret
+            }
             $result = Invoke-WebRequest -Uri $Url$SkipTakeUrl -Method GET -ContentType "application/json" -Headers $Script:AuthenticationHeaders -UseBasicParsing
             $resultSubset = (ConvertFrom-Json  $result.Content)
             $ReturnValue.AddRange($resultSubset.value)
