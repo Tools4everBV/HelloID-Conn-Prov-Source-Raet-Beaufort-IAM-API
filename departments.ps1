@@ -149,6 +149,7 @@ function Get-RaetOrganizationUnitsList {
 
             $organizationUnit = [PSCustomObject]@{
                 ExternalId=$ExternalIdOu
+                ShortName=$iten.shortName
                 DisplayName=$item.fullName
                 ManagerExternalId=$managerId
                 ParentExternalId=$item.parentOrgUnit
