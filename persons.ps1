@@ -1,6 +1,3 @@
-$Script:AuthenticationHeaders = $null
-$Script:expirationTimeAccessToken = $null
-
 $clientId = "<Provide your Client ID here>"
 $clientSecret = "<Provide your Client Secret here>"
 

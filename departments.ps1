@@ -1,6 +1,3 @@
-$Script:AuthenticationHeaders = $null
-$Script:expirationTimeAccessToken = $null
-
 $clientId = "<Provide your Client ID here>"
 $clientSecret = "<Provide your Client Secret here>"
 
@@ -131,7 +128,7 @@ function Get-RaetOrganizationUnitsList {
         foreach($item in $organizationalUnits)
         {
          
-            $ouRoleAssignments = $roleAssignments | Select * | Where organizationUnit -eq $item.id
+            $ouRoleAssignments = $roleAssignments | Select-Object * | Where-Object organizationUnit -eq $item.id
 
             $managerId = $null;
             $ExternalIdOu = $null;
