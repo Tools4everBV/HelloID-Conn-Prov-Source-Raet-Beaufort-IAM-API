@@ -1,5 +1,8 @@
-$clientId = "<Provide your Client ID here>"
-$clientSecret = "<Provide your Client Secret here>"
+$config = $configuration | ConvertFrom-Json 
+
+$clientId = $config.connection.clientId
+$clientSecret = $config.connection.clientSecret
+$tenantId = $config.connection.tenantId
 
 function New-RaetSession { 
     [CmdletBinding()]
