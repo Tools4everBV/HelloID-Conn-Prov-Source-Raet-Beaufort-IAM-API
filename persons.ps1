@@ -115,6 +115,7 @@ function Get-RaetPersonDataList {
     
     try {
         $persons = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/employees"
+        
         # Make sure persons are unique
         $persons = $persons | Sort-Object id -Unique
 
@@ -125,7 +126,9 @@ function Get-RaetPersonDataList {
         $assignmentHashtable = @{}
         foreach ($record in $assignments) {
             $tmpKey = $record.personCode + "_" + $record.employmentCode
- 
+            #if ($record.personCode -eq $employeeIdFilter) {
+            #    $record
+            #}
             if (![string]::IsNullOrEmpty($tmpKey)) {
                 if($assignmentHashtable.Contains($tmpKey)) {
                     $assignmentHashtable.$tmpKey += ($record)
@@ -152,9 +155,7 @@ function Get-RaetPersonDataList {
                 $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName;
                                                             
                 $contracts = @();                    
-                foreach ($employment in $person.employments) { 
-                
-                             
+                foreach ($employment in $person.employments) {                           
                         $fullName = $null
                         if (![string]::IsNullOrEmpty($employment.jobProfile)) {
                             $jobProfilesPerEmployment = $jobProfiles | Select-Object * | Where-Object shortName -eq $employment.jobProfile
@@ -199,11 +200,10 @@ function Get-RaetPersonDataList {
                                         }
                                     }
                                     $contracts += $Contract
-                                    break
                                 }
                             }
                         }
-                        } 
+                    } 
  
                     $person | Add-Member -Name "Contracts" -MemberType NoteProperty -Value $contracts -Force;
 
@@ -239,7 +239,7 @@ function Get-RaetPersonDataList {
                         $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force
                     }
                 }
-                Write-Output $person | ConvertTo-Json -Depth 10;
+                #Write-Output $person | ConvertTo-Json -Depth 10
             }
         }
     }
