@@ -11,7 +11,7 @@
       }
     },
     {
-      "key": "connection.apiKey",
+      "key": "connection.clientSecret",
       "type": "input",
       "defaultValue": "",
       "templateOptions": {
