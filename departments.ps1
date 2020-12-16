@@ -129,7 +129,6 @@ function Get-RaetOrganizationUnitsList {
                     if ($roleAssignment.ShortName -eq 'MGR') {
                         if($managerActiveCompareDate -ge $roleAssignment.startDate -and $roleAssignment.endDate -le $managerActiveCompareDate ){
                             $managerId = $roleAssignment.personCode
-                            $ExternalIdOu = $roleAssignment.organizationUnit
                             break
                         }
                     }
