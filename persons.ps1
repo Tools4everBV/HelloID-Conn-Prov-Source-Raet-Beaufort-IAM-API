@@ -162,7 +162,6 @@ function Get-RaetPersonDataList {
                             foreach ($item in $jobProfilesPerEmployment) {
                                 if ($item.shortName -eq $employment.jobProfile) {                                                               
                                     $fullName = $item.fullName
-                                    break
                                 }
                             }
 
