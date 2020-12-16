@@ -49,13 +49,13 @@ function New-RaetSession {
     }
     catch {
         if ($_.Exception.Response.StatusCode -eq "Forbidden") {
-            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
+            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
         } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
-            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'" 
+            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'" 
         } else {
-            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'" 
+            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'" 
         }  
-        Exit;
+        throw $errorMessage
     } 
 }
 
@@ -96,13 +96,13 @@ function Invoke-RaetWebRequestList {
     }
     catch {
         if ($_.Exception.Response.StatusCode -eq "Forbidden") {
-            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
+            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
         } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
-            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'" 
+            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'" 
         } else {
-            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'" 
-        } 
-        exit;
+            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'" 
+        }  
+        throw $errorMessage
     }
     return $ReturnValue
 }
@@ -236,7 +236,7 @@ function Get-RaetPersonDataList {
 
                     #Extend the person model using the person field extensions
                     foreach ($extension in $person.extensions) {
-                        $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force;
+                        $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force
                     }
                 }
                 Write-Output $person | ConvertTo-Json -Depth 10;
@@ -244,7 +244,7 @@ function Get-RaetPersonDataList {
         }
     }
     catch {
-        Write-Error "Could not Get-RaetPersonDataList, message: $($_.Exception.Message)"
+        Throw "Could not Get-RaetPersonDataList, message: $($_.Exception.Message)"
     } 
 }
 
