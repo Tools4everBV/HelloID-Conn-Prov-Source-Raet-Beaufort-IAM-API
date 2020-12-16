@@ -48,20 +48,13 @@ function New-RaetSession {
         }     
     }
     catch {
-        if ($_.ErrorDetails) {
-            Write-Error $_.ErrorDetails
-        }
-        elseif ($_.Exception.Response) {
-            $result = $_.Exception.Response.GetResponseStream()
-            $reader = New-Object System.IO.StreamReader($result)
-            $responseReader = $reader.ReadToEnd()
-            $errorExceptionStreamResponse = $responseReader | ConvertFrom-Json
-            $reader.Dispose()
-            Write-Error $errorExceptionStreamResponse.error.message
-        }
-        else {
-            Write-Error "Something went wrong while connecting to the RAET API";
-        }
+        if ($_.Exception.Response.StatusCode -eq "Forbidden") {
+            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
+        } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
+            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'" 
+        } else {
+            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'" 
+        }  
         Exit;
     } 
 }
@@ -102,20 +95,13 @@ function Invoke-RaetWebRequestList {
         }until([string]::IsNullOrEmpty($resultSubset.nextLink))
     }
     catch {
-        if ($_.ErrorDetails) {
-            Write-Error $_.ErrorDetails
-        }
-        elseif ($_.Exception.Response) {
-            $result = $_.Exception.Response.GetResponseStream()
-            $reader = New-Object System.IO.StreamReader($result)
-            $responseReader = $reader.ReadToEnd()
-            $errorExceptionStreamResponse = $responseReader | ConvertFrom-Json
-            $reader.Dispose()
-            Write-Error $errorExceptionStreamResponse.error.message
-        }
-        else {
-            Write-Error "Something went wrong while fetching data from the RAET API";
-        }  
+        if ($_.Exception.Response.StatusCode -eq "Forbidden") {
+            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
+        } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
+            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'" 
+        } else {
+            Write-Verbose -Verbose "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'" 
+        } 
         exit;
     }
     return $ReturnValue
