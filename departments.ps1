@@ -120,11 +120,10 @@ function Get-RaetOrganizationUnitsList {
         $departments = @();
         foreach($item in $organizationalUnits)
         {
-         
             $ouRoleAssignments = $roleAssignments | Select-Object * | Where-Object organizationUnit -eq $item.id
-
-            $managerId = $null;
-            $ExternalIdOu = $null;
+            
+            $managerId = $null
+            $ExternalIdOu = $item.id
             foreach ($roleAssignment in $ouRoleAssignments) {
                 if (![string]::IsNullOrEmpty($roleAssignment)) {
                     if ($roleAssignment.ShortName -eq 'MGR') {
@@ -139,7 +138,7 @@ function Get-RaetOrganizationUnitsList {
 
             $organizationUnit = [PSCustomObject]@{
                 ExternalId=$ExternalIdOu
-                ShortName=$iten.shortName
+                ShortName=$item.shortName
                 DisplayName=$item.fullName
                 ManagerExternalId=$managerId
                 ParentExternalId=$item.parentOrgUnit

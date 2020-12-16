@@ -121,14 +121,14 @@ function Get-RaetPersonDataList {
 
         $jobProfiles = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/jobProfiles"
         $jobProfiles = $jobProfiles | Select-Object * -ExcludeProperty extensions
-        
+        $jobProfileGrouped = $jobProfiles | Group-Object Id -AsHashTable
+
         $assignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/assignments"
+        #$assignmentsGrouped = $assignments | Select-Object -Property @{Name = "employmentRelationId"; Expression = { $_.personCode + "_" + $_.employmentCode } }, * | Group-Object employmentRelationId -AsHashTable
+
         $assignmentHashtable = @{}
         foreach ($record in $assignments) {
             $tmpKey = $record.personCode + "_" + $record.employmentCode
-            #if ($record.personCode -eq $employeeIdFilter) {
-            #    $record
-            #}
             if (![string]::IsNullOrEmpty($tmpKey)) {
                 if($assignmentHashtable.Contains($tmpKey)) {
                     $assignmentHashtable.$tmpKey += ($record)
@@ -146,65 +146,56 @@ function Get-RaetPersonDataList {
         $persons | Add-Member -MemberType NoteProperty -Name "HomePhoneNumber" -Value $null -Force
         
         foreach ($person in $persons) { 
-
             #Validate the required person fields
             if (($null -ne $person.knownAs) -And ($null -ne $person.lastNameAtBirth)) {
-                $person | Add-Member -Name "ExternalId" -MemberType NoteProperty -Value $person.personCode;
+                $person | Add-Member -Name "ExternalId" -MemberType NoteProperty -Value $person.personCode
 
                 $displayName = ($person.knownAs + ' ' + $person.lastNameAtBirth)
-                $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName;
+                $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName
                                                             
-                $contracts = @();                    
-                foreach ($employment in $person.employments) {                           
-                        $fullName = $null
-                        if (![string]::IsNullOrEmpty($employment.jobProfile)) {
-                            $jobProfilesPerEmployment = $jobProfiles | Select-Object * | Where-Object shortName -eq $employment.jobProfile
-                            foreach ($item in $jobProfilesPerEmployment) {
-                                if ($item.shortName -eq $employment.jobProfile) {                                                               
-                                    $fullName = $item.fullName
-                                }
-                            }
+                $contracts = New-Object System.Collections.Generic.List[System.Object]                  
+                foreach ($employment in $person.employments) {
+                    $lookingFor = $person.personCode + "_" + $employment.employmentCode
+                    #$personAssignments = $assignmentsGrouped[$person.personCode + "_" + $employment.employmentCode]
 
-                            $lookingFor = $person.personCode + "_" + $employment.employmentCode
-                            $personAssignments = $assignmentHashtable.$lookingFor
-                            foreach($assignment in $personAssignments){
-                            if (![string]::IsNullOrEmpty($assignment)) {
-                                if ($assignment.employmentCode -eq $employment.employmentCode) {
-                                                                                                                        
-                                    #Contract result object used in HelloID
-                                    $Contract = [PSCustomObject]@{
-                                        ExternalId       = $person.personCode + '_' + $employment.employmentCode + '_' + $assignment.employmentCode
-                                        EmploymentType   = @{
-                                            ShortName = $employment.employmentType
-                                            FullName  = $null
-                                        }
-                                        PersonCode       = $person.personCode
-                                        EmploymentCode   = $employment.employmentCode
-                                        StartDate        = $assignment.startDate
-                                        EndDate          = $assignment.endDate
-                                        DischargeDate    = $employment.dischargeDate
-                                        HireDate         = $employment.hireDate
-                                        JobProfile       = @{
-                                            ShortName = $assignment.jobProfile
-                                            FullName  = $fullName
-                                        }
-                                        WorkingAmount    = @{
-                                            AmountOfWork = $assignment.workingAmount.amountOfWork
-                                            UnitOfWork   = $assignment.workingAmount.unitOfWork
-                                            PeriodOfWork = $assignment.workingAmount.periodOfWork
-                                        }
-                                        OrganizationUnit = @{
-                                            ShortName = $assignment.organizationUnit
-                                            FullName  = $null
-                                        }
-                                    }
-                                    $contracts += $Contract
+                    $personAssignments = $assignmentHashtable.$lookingFor
+                    foreach($assignment in $personAssignments){
+                        if ($assignment.employmentCode -eq $employment.employmentCode) {
+                            $jobProfile = $jobProfileGrouped["$($assignment.jobProfile)"]                                                                                    
+                                
+                            #Contract result object used in HelloID
+                            $Contract = [PSCustomObject]@{
+                                #ExternalId       = $person.personCode + '_' + $employment.employmentCode + '_' + $assignment.employmentCode
+                                ExternalId       = $assignment.id
+                                EmploymentType   = @{
+                                    ShortName = $employment.employmentType
+                                    FullName  = $null
+                                }
+                                PersonCode       = $person.personCode
+                                EmploymentCode   = $employment.employmentCode
+                                StartDate        = $assignment.startDate
+                                EndDate          = $assignment.endDate
+                                DischargeDate    = $employment.dischargeDate
+                                HireDate         = $employment.hireDate
+                                JobProfile       = @{
+                                    ShortName = $assignment.jobProfile
+                                    FullName  = $($jobProfile.fullName)
+                                }
+                                WorkingAmount    = @{
+                                    AmountOfWork = $assignment.workingAmount.amountOfWork
+                                    UnitOfWork   = $assignment.workingAmount.unitOfWork
+                                    PeriodOfWork = $assignment.workingAmount.periodOfWork
+                                }
+                                OrganizationUnit = @{
+                                    ShortName = $assignment.organizationUnit
+                                    FullName  = $null
                                 }
                             }
+                            $contracts.add($Contract)
                         }
                     } 
  
-                    $person | Add-Member -Name "Contracts" -MemberType NoteProperty -Value $contracts -Force;
+                    $person | Add-Member -Name "Contracts" -MemberType NoteProperty -Value $contracts -Force
 
                     # Add emailAddresses to the person
                     foreach ($emailAddress in $person.emailAddresses) {
@@ -238,7 +229,7 @@ function Get-RaetPersonDataList {
                         $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force
                     }
                 }
-                #Write-Output $person | ConvertTo-Json -Depth 10
+                Write-Output $person | ConvertTo-Json -Depth 10
             }
         }
     }
