@@ -1,35 +1,44 @@
 [
-    {
-      "key": "connection.clientId",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Client Id",
-        "placeholder": "Enter the client Id here",
-        "description": "",
-        "required": true
-      }
-    },
-    {
-      "key": "connection.clientSecret",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Client Secret",
-        "type": "password",
-        "placeholder": "Enter the Client Secret here",
-        "required": true
-      }
-    },
-    {
-      "key": "connection.tenantId",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Tenant Id",
-        "placeholder": "Enter the Tenant Id here",
-        "description": "Optional. Not required in most implementations.",
-        "required": false
-      }
+  {
+    "key": "connection.clientId",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Client Id",
+      "placeholder": "Enter the client Id here",
+      "description": "",
+      "required": true
     }
-  ]
+  },
+  {
+    "key": "connection.clientSecret",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Client Secret",
+      "type": "password",
+      "placeholder": "Enter the Client Secret here",
+      "required": true
+    }
+  },
+  {
+    "key": "connection.tenantId",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Tenant Id",
+      "placeholder": "Enter the Tenant Id here",
+      "description": "Optional. Not required in most implementations.",
+      "required": false
+    }
+  },
+  {
+    "key": "switchIncludeAssignments",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Include assignments",
+      "required": false
+    }
+  }
+]
