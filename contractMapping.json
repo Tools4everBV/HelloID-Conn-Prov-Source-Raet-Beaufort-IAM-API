@@ -25,14 +25,6 @@
             }
         },
         {
-            "name": "Custom.formattedLastName",
-            "mode": "field",
-            "value": "id",
-            "validation": {
-                "required": false
-            }
-        },
-        {
             "name": "Details.Gender",
             "mode": "field",
             "value": "gender",
