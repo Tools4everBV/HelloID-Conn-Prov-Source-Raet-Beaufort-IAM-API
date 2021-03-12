@@ -114,6 +114,9 @@ function Get-RaetOrganizationUnitsList {
     try {
         $organizationalUnits = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/organizationUnits"
         $roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
+        # Sort Role assignments on personCode to make sure we always have the same manager with the same data
+        $roleAssignments = $roleAssignments | Sort-Object -Property personCode        
+        
         $managerActiveCompareDate = Get-Date
 
         Write-Verbose -Verbose "Department import starting";
