@@ -107,54 +107,6 @@
     ],
     "contractMappings": [
         {
-            "name": "CostBearer.Code",
-            "mode": "fixed",
-            "value": "NA",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostBearer.ExternalId",
-            "mode": "fixed",
-            "value": "NA",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostBearer.Name",
-            "mode": "fixed",
-            "value": "Not available",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostCenter.Code",
-            "mode": "fixed",
-            "value": "NA",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostCenter.ExternalId",
-            "mode": "fixed",
-            "value": "NA",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostCenter.Name",
-            "mode": "fixed",
-            "value": "Not available",
-            "validation": {
-                "required": false
-            }
-        },
-        {
             "name": "Department.DisplayName",
             "mode": "field",
             "value": "OrganizationUnit.FullName",
@@ -182,30 +134,6 @@
             "name": "Details.Sequence",
             "mode": "field",
             "value": "EmploymentCode",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "Employer.Code",
-            "mode": "fixed",
-            "value": "NA",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "Employer.ExternalId",
-            "mode": "fixed",
-            "value": "NA",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "Employer.Name",
-            "mode": "fixed",
-            "value": "Not available",
             "validation": {
                 "required": false
             }
