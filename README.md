@@ -34,3 +34,13 @@ This connector retrieves HR data from the RAET IAM API. Please be aware that the
 Use the configuration.json in the Source Connector on "Custom connector configuration". You can use the created field on the Configuration Tab to set the ClientID, ClienSecret and tenantID. Also you can choose if you want to include the assignments from the IAM-API.
 
 ![config](https://user-images.githubusercontent.com/67468224/110907438-ad492e80-830d-11eb-9507-7b7a61fe2b0d.jpg)
+
+Please choose the default mappingset to use with the configured IAM-API configuration.
+
+For assignments:
+personMapping_assigment.json
+contractMapping_assignment.json
+
+For employments:
+personMapping_employments.json
+contractMapping_employments.json
