@@ -21,12 +21,18 @@ This connector retrieves HR data from the RAET IAM API. Please be aware that the
 - /organizationUnits (departments)
 - /roleAssignments (departments)
 
+
+## Raet IAM API documentation
+Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company and costcenter are not available for HR Core Beaufort customers.
+- https://community.raet.com/developers-community/w/iam-api
+- https://community.raet.com/developers-community/w/iam-api/2472/data-mapping
+
 ---
 
 ## Getting started
 
 ### Prerequisites
-
+_Please note that you need to have an authorized Raet Developers account in order to request and receive the API credentials. See: https://developers.youforce.com/_
  - [ ] ClientID, ClientSecret and tenantID to authenticate with RAET IAM-API Webservice
 
 
