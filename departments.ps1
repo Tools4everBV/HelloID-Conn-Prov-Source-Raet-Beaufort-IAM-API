@@ -130,7 +130,10 @@ function Get-RaetOrganizationUnitsList {
             foreach ($roleAssignment in $ouRoleAssignments) {
                 if (![string]::IsNullOrEmpty($roleAssignment)) {
                     if ($roleAssignment.ShortName -eq 'MGR') {
-                        if($managerActiveCompareDate -ge $roleAssignment.startDate -and $roleAssignment.endDate -le $managerActiveCompareDate ){
+                        $startDate = ([Datetime]::ParseExact($roleAssignment.startDate, 'yyyy-MM-dd', $null))
+                        $endDate = ([Datetime]::ParseExact($roleAssignment.endDate, 'yyyy-MM-dd', $null))
+                      
+                        if($managerActiveCompareDate -ge $startDate -and $endDate -ge $managerActiveCompareDate ){
                             $managerId = $roleAssignment.personCode
                             break
                         }
@@ -148,7 +151,7 @@ function Get-RaetOrganizationUnitsList {
             $departments += $organizationUnit;
         }
         Write-Verbose -Verbose "Department import completed";
-        Write-Output $departments | ConvertTo-Json -Depth 10;
+        Write-Output $departments | ConvertTo-Json -Depth 10;     
     } catch {
         throw "Could not Get-OrganizationUnitsList, message: $($_.Exception.Message)"   
     }
