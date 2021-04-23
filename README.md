@@ -1,8 +1,9 @@
-## HelloID-Conn-Prov-Source-RAET-IAM-API
+## HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort
 
 ## Table of contents
 - [Introduction](#Introduction)
 - [Endpoints implemented](#Endpoints-implemented)
+- [Differences between RAET versions](#Differences-RAET-between-versions)
 - [Getting started](#Getting-started)
   + [Prerequisites](#Prerequisites)
   + [Configuration Settings](#Configuration-Settings)
@@ -11,7 +12,7 @@
 
 ## Introduction
 
-This connector retrieves HR data from the RAET IAM API. Please be aware that there are several versions. This version connects to the latest API release.
+This connector retrieves HR data from the RAET IAM API. Please be aware that there are several versions. This version connects to the latest API release and is intended for Beaufort Customers. The code structure is mainly the same as the HR core Business variant. Despite the differences below.
 
 ## Endpoints implemented
 
@@ -21,6 +22,14 @@ This connector retrieves HR data from the RAET IAM API. Please be aware that the
 - /organizationUnits (departments)
 - /roleAssignments (departments)
 
+## Differences between RAET versions
+|  Differences | ManagerId  |  Person | nameAssembleOrder  | Assignments |
+|---|---|---|---|---|
+| HR Core Business:   |OrganizationUnits      |  A PersonObject foreach employement    |  Digits (0,1,2,3,4,)     | Not Supported  |
+| HR Beaufort  | RoleAssignment        | One PersonObject with multiple Employments  | Letters((E,P,C,B,D)     | Available  |
+##### HR Beaufort
+ - Manager in de Role Assignements 
+ - nameAssembleOrder  Letters((E,P,C,B,D
 
 ## Raet IAM API documentation
 Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company and costcenter are not available for HR Core Beaufort customers.
