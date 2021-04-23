@@ -115,6 +115,8 @@ function Get-RaetPersonDataList {
     $Script:BaseUrl = "https://api.raet.com/iam/v1.0"
     
     try {
+        $ActiveCompareDate = Get-Date
+
         $persons = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/employees"
 
         # Make sure persons are unique
@@ -122,6 +124,11 @@ function Get-RaetPersonDataList {
 
         $jobProfiles = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/jobProfiles"
         $jobProfiles = $jobProfiles | Select-Object * -ExcludeProperty extensions
+        $jobProfiles = $jobProfiles | Where-Object {$_.isActive -ne $false}
+        $jobProfiles = $jobProfiles | Where-Object {
+                ($ActiveCompareDate -ge ([Datetime]::ParseExact($_.validFrom, 'yyyy-MM-dd', $null))) -and 
+                (([Datetime]::ParseExact($_.validUntil, 'yyyy-MM-dd', $null)) -ge $ActiveCompareDate)
+        }
         $jobProfileGrouped = $jobProfiles | Group-Object Id -AsHashTable
 
         if($true -eq $includeAssignments){
