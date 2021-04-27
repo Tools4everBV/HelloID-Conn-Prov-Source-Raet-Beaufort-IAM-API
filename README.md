@@ -59,3 +59,6 @@ contractMapping_assignment.json
 For employments:
 personMapping_employments.json
 contractMapping_employments.json
+
+# HelloID Docs
+The official HelloID documentation can be found at: https://docs.helloid.com/
