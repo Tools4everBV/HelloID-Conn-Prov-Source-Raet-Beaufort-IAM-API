@@ -112,18 +112,23 @@ function Get-RaetOrganizationUnitsList {
     $Script:BaseUrl = "https://api.raet.com/iam/v1.0"
 
     try {
+        Write-Verbose -Verbose "Department import starting";
+
         $organizationalUnits = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/organizationUnits"
         $roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
         # Sort Role assignments on personCode to make sure we always have the same manager with the same data
         $roleAssignments = $roleAssignments | Sort-Object -Property personCode        
-        
+
         $managerActiveCompareDate = Get-Date
 
-        Write-Verbose -Verbose "Department import starting";
-        $departments = @();
+        [System.Collections.ArrayList]$departments =  @()
         foreach($item in $organizationalUnits)
         {
-            $ouRoleAssignments = $roleAssignments | Select-Object * | Where-Object organizationUnit -eq $item.id
+            $ouRoleAssignments = foreach($roleAssignment in $roleAssignments){
+                if($roleAssignment.organizationUnit -eq $item.id){
+                    $roleAssignment
+                }
+            }
             
             $managerId = $null
             $ExternalIdOu = $item.id
@@ -148,10 +153,11 @@ function Get-RaetOrganizationUnitsList {
                 ManagerExternalId=$managerId
                 ParentExternalId=$item.parentOrgUnit
             }
-            $departments += $organizationUnit;
+            $null = $departments.Add($organizationUnit)
         }
         Write-Verbose -Verbose "Department import completed";
-        Write-Output $departments | ConvertTo-Json -Depth 10;     
+        Write-Output $departments | ConvertTo-Json -Depth 10;
+        
     } catch {
         throw "Could not Get-OrganizationUnitsList, message: $($_.Exception.Message)"   
     }
