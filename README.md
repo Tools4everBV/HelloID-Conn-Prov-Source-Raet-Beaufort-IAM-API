@@ -3,6 +3,7 @@
 ## Table of contents
 - [Introduction](#Introduction)
 - [Endpoints implemented](#Endpoints-implemented)
+- [Raet IAM API status monitoring](#Raet-IAM-API-status-monitoring)
 - [Differences between RAET versions](#Differences-RAET-between-versions)
 - [Getting started](#Getting-started)
   + [Prerequisites](#Prerequisites)
@@ -22,6 +23,10 @@ This connector retrieves HR data from the RAET IAM API. Please be aware that the
 - /organizationUnits (departments)
 - /roleAssignments (departments)
 
+## Raet IAM API status monitoring
+https://developers.youforce.com/api-status
+
+
 ## Differences between RAET versions
 |  Differences | ManagerId  |  Person | nameAssembleOrder  | Assignments |
 |---|---|---|---|---|
@@ -39,9 +44,14 @@ Please see the following website about the Raet IAM API documentation. Also note
 ---
 
 ## Getting started
+Please note that you need to have an authorized Raet Developers account in order to request and receive the API credentials. See: https://developers.youforce.com
+
+Make sure your client does the IAM API access request themselves on behalf of your own Raet Developers account (don't use Tools4ever, but your own developer account)
+
+More info about Raet Developers Portal: https://youtu.be/M9RHvm_KMh0
 
 ### Prerequisites
-_Please note that you need to have an authorized Raet Developers account in order to request and receive the API credentials. See: https://developers.youforce.com/_
+
  - [ ] ClientID, ClientSecret and tenantID to authenticate with RAET IAM-API Webservice
 
 
