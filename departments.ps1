@@ -117,7 +117,7 @@ function Get-RaetOrganizationUnitsList {
         $organizationalUnits = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/organizationUnits"
         $roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
         # Sort Role assignments on personCode to make sure we always have the same manager with the same data
-        $roleAssignments = $roleAssignments | Sort-Object -Property personCode        
+        $roleAssignments = $roleAssignments | Sort-Object -Property { [int]$_.personCode }
 
         $managerActiveCompareDate = Get-Date
 
