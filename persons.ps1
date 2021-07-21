@@ -157,146 +157,150 @@ function Get-RaetPersonDataList {
         
         foreach ($person in $persons) { 
             #Validate the required person fields
+
+            $person | Add-Member -Name "ExternalId" -MemberType NoteProperty -Value $person.personCode
+
             if (($null -ne $person.knownAs) -And ($null -ne $person.lastNameAtBirth)) {
-                $person | Add-Member -Name "ExternalId" -MemberType NoteProperty -Value $person.personCode
-
                 $displayName = ($person.knownAs + ' ' + $person.lastNameAtBirth)
-                $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName
-                                                            
-                $contracts = New-Object System.Collections.Generic.List[System.Object]
-                foreach ($employment in $person.employments) {                
-                    $jobProfile = $jobProfileGrouped["$($employment.jobProfile)"]    
-                    
-                    if($true -eq $includeAssignments){
-                        # Create Contract object(s) based on assignments
-                        $lookingFor = $person.personCode + "_" + $employment.employmentCode
-                        #$personAssignments = $assignmentsGrouped[$person.personCode + "_" + $employment.employmentCode]
-
-                        $personAssignments = $assignmentHashtable.$lookingFor
-                        foreach($assignment in $personAssignments){
-                            if ($assignment.employmentCode -eq $employment.employmentCode) {
-                                $jobProfile = $jobProfileGrouped["$($assignment.jobProfile)"]                                                                                    
-                                    
-                                #Contract result object used in HelloID
-                                $Contract = [PSCustomObject]@{
-                                    ExternalId       = $assignment.id
-                                    EmploymentType   = @{
-                                        ShortName = $employment.employmentType
-                                        FullName  = $null
-                                    }
-                                    PersonCode       = $person.personCode
-                                    EmploymentCode   = $employment.employmentCode
-                                    StartDate        = $assignment.startDate
-                                    EndDate          = $assignment.endDate
-                                    DischargeDate    = $employment.dischargeDate
-                                    HireDate         = $employment.hireDate
-                                    JobProfile       = @{
-                                        ShortName = $assignment.jobProfile
-                                        FullName  = $($jobProfile.fullName)
-                                    }
-                                    WorkingAmount    = @{
-                                        AmountOfWork = $assignment.workingAmount.amountOfWork
-                                        UnitOfWork   = $assignment.workingAmount.unitOfWork
-                                        PeriodOfWork = $assignment.workingAmount.periodOfWork
-                                    }
-                                    OrganizationUnit = @{
-                                        ShortName = $assignment.organizationUnit
-                                        FullName  = $null
-                                    }
-                                }
-                                $contracts.add($Contract)
-                            }
-                        } 
-                    }else{
-                        # Create Contract object(s) based on employments
-
-                        #Contract result object used in HelloID
-                        $Contract = [PSCustomObject]@{
-                            ExternalId       = $person.personCode + '_' + $employment.employmentCode
-                            EmploymentType   = @{
-                                ShortName = $employment.employmentType
-                                FullName  = $null
-                            }
-                            PersonCode       = $person.personCode
-                            EmploymentCode   = $employment.employmentCode
-                            StartDate        = $employment.hireDate
-                            EndDate          = $employment.dischargeDate
-                            DischargeDate    = $employment.dischargeDate
-                            HireDate         = $employment.hireDate
-                            JobProfile       = @{
-                                ShortName = $employment.jobProfile
-                                FullName  = $($jobProfile.fullName)
-                            }
-                            WorkingAmount    = @{
-                                AmountOfWork = $employment.workingAmount.amountOfWork
-                                UnitOfWork   = $employment.workingAmount.unitOfWork
-                                PeriodOfWork = $employment.workingAmount.periodOfWork
-                            }
-                            OrganizationUnit = @{
-                                ShortName = $employment.organizationUnit
-                                FullName  = $null
-                            }
-                        }
-                        $contracts.add($Contract)
-                    }
-                                                                                
-                    $person | Add-Member -Name "Contracts" -MemberType NoteProperty -Value $contracts -Force
-
-                    # Add emailAddresses to the person
-                    foreach ($emailAddress in $person.emailAddresses) {
-                        if (![string]::IsNullOrEmpty($emailAddress)) {
-                            if ($emailAddress.type -eq "Business") {
-                                $person.BusinessEmailAddress = $emailAddress.address
-                            } 
-                            if ($emailAddress.type -eq "Private") {
-                                $person.PrivateEmailAddress = $emailAddress.address
-                            }                           
-                        }
-                    }
-
-                    # Add phoneNumbers  to the person
-                    foreach ($phoneNumber in $person.phoneNumbers) {
-                        if (![string]::IsNullOrEmpty($phoneNumber)) {
-                            if ($phoneNumber.type -eq "Business") {
-                                $person.BusinessPhoneNumber = $phoneNumber.number
-                            }
-                            if ($phoneNumber.type -eq "Mobile") {
-                                $person.MobilePhoneNumber = $phoneNumber.number
-                            }
-                            if ($phoneNumber.type -eq "Home") {
-                                $person.HomePhoneNumber = $phoneNumber.number
-                            }       
-                        }
-                    }
-
-                    #Extend the person model using the person field extensions
-                    foreach ($extension in $person.extensions) {
-                        $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force
-                    }
-                }
-
-                # Convert naming convention codes to standard
-                Switch($person.nameAssembleOrder ){
-                    "E" {
-                        $person.nameAssembleOrder = "B"
-                    }
-                    "P" {
-                        $person.nameAssembleOrder = "P"
-                    }
-                    "C" {
-                        $person.nameAssembleOrder = "BP"
-                    }
-                    "B" {
-                        $person.nameAssembleOrder = "PB"
-                    }
-                    "D" {
-                        $person.nameAssembleOrder = "BP"
-                    }
-                }
-
-                Write-Output $person | ConvertTo-Json -Depth 10
+            }else{
+                $displayName = "Missing knownAs, or lastNameAtBirth"
             }
+            $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName
+
+            $contracts = New-Object System.Collections.Generic.List[System.Object]
+            foreach ($employment in $person.employments) {                
+                $jobProfile = $jobProfileGrouped["$($employment.jobProfile)"]    
+
+                if($true -eq $includeAssignments){
+                    # Create Contract object(s) based on assignments
+                    $lookingFor = $person.personCode + "_" + $employment.employmentCode
+                    #$personAssignments = $assignmentsGrouped[$person.personCode + "_" + $employment.employmentCode]
+
+                    $personAssignments = $assignmentHashtable.$lookingFor
+                    foreach($assignment in $personAssignments){
+                        if ($assignment.employmentCode -eq $employment.employmentCode) {
+                            $jobProfile = $jobProfileGrouped["$($assignment.jobProfile)"]                                                                                    
+
+                            #Contract result object used in HelloID
+                            $Contract = [PSCustomObject]@{
+                                ExternalId       = $assignment.id
+                                EmploymentType   = @{
+                                    ShortName = $employment.employmentType
+                                    FullName  = $null
+                                }
+                                PersonCode       = $person.personCode
+                                EmploymentCode   = $employment.employmentCode
+                                StartDate        = $assignment.startDate
+                                EndDate          = $assignment.endDate
+                                DischargeDate    = $employment.dischargeDate
+                                HireDate         = $employment.hireDate
+                                JobProfile       = @{
+                                    ShortName = $assignment.jobProfile
+                                    FullName  = $($jobProfile.fullName)
+                                }
+                                WorkingAmount    = @{
+                                    AmountOfWork = $assignment.workingAmount.amountOfWork
+                                    UnitOfWork   = $assignment.workingAmount.unitOfWork
+                                    PeriodOfWork = $assignment.workingAmount.periodOfWork
+                                }
+                                OrganizationUnit = @{
+                                    ShortName = $assignment.organizationUnit
+                                    FullName  = $null
+                                }
+                            }
+                            $contracts.add($Contract)
+                        }
+                    } 
+                }else{
+                    # Create Contract object(s) based on employments
+
+                    #Contract result object used in HelloID
+                    $Contract = [PSCustomObject]@{
+                        ExternalId       = $person.personCode + '_' + $employment.employmentCode
+                        EmploymentType   = @{
+                            ShortName = $employment.employmentType
+                            FullName  = $null
+                        }
+                        PersonCode       = $person.personCode
+                        EmploymentCode   = $employment.employmentCode
+                        StartDate        = $employment.hireDate
+                        EndDate          = $employment.dischargeDate
+                        DischargeDate    = $employment.dischargeDate
+                        HireDate         = $employment.hireDate
+                        JobProfile       = @{
+                            ShortName = $employment.jobProfile
+                            FullName  = $($jobProfile.fullName)
+                        }
+                        WorkingAmount    = @{
+                            AmountOfWork = $employment.workingAmount.amountOfWork
+                            UnitOfWork   = $employment.workingAmount.unitOfWork
+                            PeriodOfWork = $employment.workingAmount.periodOfWork
+                        }
+                        OrganizationUnit = @{
+                            ShortName = $employment.organizationUnit
+                            FullName  = $null
+                        }
+                    }
+                    $contracts.add($Contract)
+                }
+
+                $person | Add-Member -Name "Contracts" -MemberType NoteProperty -Value $contracts -Force
+
+                # Add emailAddresses to the person
+                foreach ($emailAddress in $person.emailAddresses) {
+                    if (![string]::IsNullOrEmpty($emailAddress)) {
+                        if ($emailAddress.type -eq "Business") {
+                            $person.BusinessEmailAddress = $emailAddress.address
+                        } 
+                        if ($emailAddress.type -eq "Private") {
+                            $person.PrivateEmailAddress = $emailAddress.address
+                        }                           
+                    }
+                }
+
+                # Add phoneNumbers  to the person
+                foreach ($phoneNumber in $person.phoneNumbers) {
+                    if (![string]::IsNullOrEmpty($phoneNumber)) {
+                        if ($phoneNumber.type -eq "Business") {
+                            $person.BusinessPhoneNumber = $phoneNumber.number
+                        }
+                        if ($phoneNumber.type -eq "Mobile") {
+                            $person.MobilePhoneNumber = $phoneNumber.number
+                        }
+                        if ($phoneNumber.type -eq "Home") {
+                            $person.HomePhoneNumber = $phoneNumber.number
+                        }       
+                    }
+                }
+
+                #Extend the person model using the person field extensions
+                foreach ($extension in $person.extensions) {
+                    $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force
+                }
+            }
+
+            # Convert naming convention codes to standard
+            Switch($person.nameAssembleOrder ){
+                "E" {
+                    $person.nameAssembleOrder = "B"
+                }
+                "P" {
+                    $person.nameAssembleOrder = "P"
+                }
+                "C" {
+                    $person.nameAssembleOrder = "BP"
+                }
+                "B" {
+                    $person.nameAssembleOrder = "PB"
+                }
+                "D" {
+                    $person.nameAssembleOrder = "BP"
+                }
+            }
+
+            Write-Output $person | ConvertTo-Json -Depth 10
         }
+
         Write-Verbose -Verbose "Persons import completed: $($persons.count)"
     }
     catch {
