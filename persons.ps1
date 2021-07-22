@@ -160,10 +160,10 @@ function Get-RaetPersonDataList {
 
             $person | Add-Member -Name "ExternalId" -MemberType NoteProperty -Value $person.personCode
 
-            if (($null -ne $person.knownAs) -And ($null -ne $person.lastNameAtBirth)) {
+            if ([String]::IsNullOrEmpty($person.knownAs) -and [String]::IsNullOrEmpty($person.lastNameAtBirth)) {
+                $displayName = $person.personCode
+            } else {
                 $displayName = ($person.knownAs + ' ' + $person.lastNameAtBirth)
-            }else{
-                $displayName = "Missing knownAs, or lastNameAtBirth"
             }
             $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName
 
