@@ -44,8 +44,7 @@ https://developers.youforce.com/api-status
 
 ## Raet IAM API documentation
 Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company and costcenter are not available for HR Core Beaufort customers.
-- https://community.raet.com/developers-community/w/iam-api
-- https://community.raet.com/developers-community/w/iam-api/2472/data-mapping
+- https://community.visma.com/t5/Kennisbank-Youforce-API/IAM-Domain-model-amp-field-mapping/ta-p/428102
 
 ---
 
