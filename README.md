@@ -6,6 +6,8 @@
 
 <br />
 
+![image](./assets/raet.png)
+
 ## Table of contents
 - [Introduction](#Introduction)
 - [Endpoints implemented](#Endpoints-implemented)
@@ -26,6 +28,7 @@ This connector retrieves HR data from the RAET IAM API. Please be aware that the
 - /employees  (person)
 - /jobProfiles (person)
 - /assignments (person)
+- /costAllocations (person)
 - /organizationUnits (departments)
 - /roleAssignments (departments)
 
@@ -37,10 +40,10 @@ https://developers.youforce.com/api-status
 |  Differences | ManagerId  |  Person | nameAssembleOrder  | Assignments |
 |---|---|---|---|---|
 | HR Core Business:   |OrganizationUnits      |  A PersonObject foreach employement    |  Digits (0,1,2,3,4,)     | Not Supported  |
-| HR Beaufort  | RoleAssignment        | One PersonObject with multiple Employments  | Letters((E,P,C,B,D)     | Available  |
+| HR Beaufort  | RoleAssignment        | One PersonObject with multiple Employments  | Letters(E,P,C,B,D)     | Available  |
 ##### HR Beaufort
  - Manager in de Role Assignements 
- - nameAssembleOrder  Letters((E,P,C,B,D
+ - nameAssembleOrder  Letters(E,P,C,B,D)
 
 ## Raet IAM API documentation
 Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company and costcenter are not available for HR Core Beaufort customers.
@@ -66,17 +69,17 @@ More info about Raet Developers Portal: https://youtu.be/M9RHvm_KMh0
 ### Configuration Settings
 Use the configuration.json in the Source Connector on "Custom connector configuration". You can use the created field on the Configuration Tab to set the ClientID, ClienSecret and tenantID. Also you can choose if you want to include the assignments from the IAM-API.
 
-![config](https://user-images.githubusercontent.com/67468224/110907438-ad492e80-830d-11eb-9507-7b7a61fe2b0d.jpg)
+![image](./assets/configuration.png)
 
 Please choose the default mappingset to use with the configured IAM-API configuration.
 
 For assignments:
-personMapping_assigment.json
-contractMapping_assignment.json
+- personMapping_assigment.json
+- contractMapping_assignment.json
 
 For employments:
-personMapping_employments.json
-contractMapping_employments.json
+- personMapping_employments.json
+- contractMapping_employments.json
 
 # HelloID Docs
 The official HelloID documentation can be found at: https://docs.helloid.com/

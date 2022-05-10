@@ -28,8 +28,7 @@
     "templateOptions": {
       "label": "Tenant Id",
       "placeholder": "Enter the Tenant Id here",
-      "description": "Optional. Not required in most implementations.",
-      "required": false
+      "required": true
     }
   },
   {

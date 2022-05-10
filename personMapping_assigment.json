@@ -43,7 +43,7 @@
         {
             "name": "Name.Convention",
             "mode": "complex",
-            "value": "function getValue() {\r\n    if(source.nameAssembleOrder == \"P\") {\r\n        return \"P\";\r\n    }\r\n    if(source.nameAssembleOrder == \"E\") {\r\n        return \"B\";\r\n    }\r\n    if(source.nameAssembleOrder == \"B\") {\r\n        return \"PB\";\r\n    }\r\n    if(source.nameAssembleOrder == \"C\") {\r\n        return \"BP\";\r\n    }\r\n}\r\n \r\ngetValue();",
+            "value": "function getValue() {\r\n    if(source.nameAssembleOrder == \"P\") {\r\n        return \"P\";\r\n    }\r\n    if(source.nameAssembleOrder == \"E\") {\r\n        return \"B\";\r\n    }\r\n    if(source.nameAssembleOrder == \"B\") {\r\n        return \"PB\";\r\n    }\r\n    if(source.nameAssembleOrder == \"C\" || source.nameAssembleOrder == \"D\") {\r\n        return \"BP\";\r\n    }\r\n}\r\n \r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -182,6 +182,30 @@
             "name": "Title.Name",
             "mode": "field",
             "value": "JobProfile.FullName",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "CostCenter.ExternalId",
+            "mode": "field",
+            "value": "costCenter.ShortName",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "CostCenter.Code",
+            "mode": "field",
+            "value": "costCenter.ShortName",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "CostCenter.Name",
+            "mode": "field",
+            "value": "costCenter.FullName",
             "validation": {
                 "required": false
             }

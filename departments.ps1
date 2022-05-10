@@ -78,7 +78,7 @@ function Invoke-RaetWebRequestList {
         $accessTokenValid = Confirm-AccessTokenIsValid
         if($accessTokenValid -ne $true)
         {
-            New-RaetSession -ClientId $clientId -ClientSecret $clientSecret
+            New-RaetSession -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId
         }
 
         [System.Collections.ArrayList]$ReturnValue = @()

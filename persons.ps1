@@ -76,7 +76,6 @@ function Invoke-RaetWebRequestList {
         $Url
     )
     try {
-
         [System.Collections.ArrayList]$ReturnValue = @()
         $counter = 0
         do {
@@ -87,7 +86,7 @@ function Invoke-RaetWebRequestList {
             [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
             $accessTokenValid = Confirm-AccessTokenIsValid
             if ($accessTokenValid -ne $true) {
-                New-RaetSession -ClientId $clientId -ClientSecret $clientSecret
+                New-RaetSession -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId
             }
             $result = Invoke-WebRequest -Uri $Url$SkipTakeUrl -Method GET -ContentType "application/json" -Headers $Script:AuthenticationHeaders -UseBasicParsing
             $resultSubset = (ConvertFrom-Json  $result.Content)
@@ -130,6 +129,14 @@ function Get-RaetPersonDataList {
         }
         $jobProfileGrouped = $jobProfiles | Group-Object Id -AsHashTable
 
+        # fetch the CostAllocations, linking key is PersonCode + "_" + employmentCode
+        $costCenters = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/costAllocations"
+        $costCenters | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+        foreach ($costCenter in $costCenters) {
+            $costCenter.ExternalId = $costCenter.PersonCode + "_" + $costCenter.employmentCode
+        }
+        $costCentersGrouped = $costCenters | Group-Object ExternalId -AsHashTable
+
         if($true -eq $includeAssignments){
             $assignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/assignments"
 
@@ -155,7 +162,6 @@ function Get-RaetPersonDataList {
 
         foreach ($person in $persons) {
             #Validate the required person fields
-
             $person | Add-Member -Name "ExternalId" -MemberType NoteProperty -Value $person.personCode
 
             if ([String]::IsNullOrEmpty($person.knownAs) -and [String]::IsNullOrEmpty($person.lastNameAtBirth)) {
@@ -178,7 +184,11 @@ function Get-RaetPersonDataList {
                     foreach($assignment in $personAssignments){
                         if ($assignment.employmentCode -eq $employment.employmentCode) {
                             $jobProfile = $jobProfileGrouped["$($assignment.jobProfile)"]
-
+                            
+                            $costCenter = $costCentersGrouped["$($assignment.personCode)_$($assignment.employmentCode)"]
+                            if ($costCenter.Count -gt 1) {
+                                $costCenter = $costCenter | Where-Object {$_.sequenceNumber -eq 0}
+                            }
                             #Contract result object used in HelloID
                             $Contract = [PSCustomObject]@{
                                 ExternalId       = $assignment.id
@@ -205,6 +215,12 @@ function Get-RaetPersonDataList {
                                     ShortName = $assignment.organizationUnit
                                     FullName  = $null
                                 }
+                                CostCenter       = @{
+                                    ShortName = $($costCenter.costCenterCode)
+                                    FullName  = $($costCenter.CostCenterName)
+                                    Type      = $($costCenter.costTypeCode)
+                                    TypeDesc  = $($costCenter.CostTypeName)
+                                }
                             }
                             $contracts.add($Contract)
                         }
@@ -212,6 +228,10 @@ function Get-RaetPersonDataList {
                 }else{
                     # Create Contract object(s) based on employments
 
+                    $costCenter = $costCentersGrouped["$($employment.personCode)_$($employment.employmentCode)"]
+                    if ($costCenter.Count -gt 1) {
+                        $costCenter = $costCenter | Where-Object {$_.sequenceNumber -eq 0}
+                    }
                     #Contract result object used in HelloID
                     $Contract = [PSCustomObject]@{
                         ExternalId       = $person.personCode + '_' + $employment.employmentCode
@@ -237,6 +257,12 @@ function Get-RaetPersonDataList {
                         OrganizationUnit = @{
                             ShortName = $employment.organizationUnit
                             FullName  = $null
+                        }
+                        CostCenter       = @{
+                            ShortName = $($costCenter.costCenterCode)
+                            FullName  = $($costCenter.CostCenterName)
+                            Type      = $($costCenter.costTypeCode)
+                            TypeDesc  = $($costCenter.CostTypeName)
                         }
                     }
                     $contracts.add($Contract)
@@ -274,25 +300,6 @@ function Get-RaetPersonDataList {
                 #Extend the person model using the person field extensions
                 foreach ($extension in $person.extensions) {
                     $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force
-                }
-            }
-
-            # Convert naming convention codes to standard
-            Switch($person.nameAssembleOrder ){
-                "E" {
-                    $person.nameAssembleOrder = "B"
-                }
-                "P" {
-                    $person.nameAssembleOrder = "P"
-                }
-                "C" {
-                    $person.nameAssembleOrder = "BP"
-                }
-                "B" {
-                    $person.nameAssembleOrder = "PB"
-                }
-                "D" {
-                    $person.nameAssembleOrder = "BP"
                 }
             }
 
