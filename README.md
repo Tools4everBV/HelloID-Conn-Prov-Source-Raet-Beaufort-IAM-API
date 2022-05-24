@@ -8,14 +8,30 @@
 
 ![image](./assets/raet.png)
 
+## Versioning
+| Version | Description | Date |
+| - | - | - |
+| 1.1.0   | Updated perforance and logging | 2022/05/24  |
+| 1.0.0   | Initial release | 2020/08/18  |
+
 ## Table of contents
-- [Introduction](#Introduction)
-- [Endpoints implemented](#Endpoints-implemented)
-- [Raet IAM API status monitoring](#Raet-IAM-API-status-monitoring)
-- [Differences between RAET versions](#Differences-RAET-between-versions)
-- [Getting started](#Getting-started)
-  + [Prerequisites](#Prerequisites)
-  + [Configuration Settings](#Configuration-Settings)
+- [HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort](#helloid-conn-prov-source-raet-iam-api-beaufort)
+- [Versioning](#versioning)
+- [Table of contents](#table-of-contents)
+- [Introduction](#introduction)
+- [Endpoints implemented](#endpoints-implemented)
+- [Raet IAM API status monitoring](#raet-iam-api-status-monitoring)
+- [Differences between RAET versions](#differences-between-raet-versions)
+      - [HR Beaufort](#hr-beaufort)
+- [Raet IAM API documentation](#raet-iam-api-documentation)
+- [Getting started](#getting-started)
+  - [Connection settings](#connection-settings)
+  - [Prerequisites](#prerequisites)
+  - [Remarks](#remarks)
+  - [Mappings](#mappings)
+  - [Scope](#scope)
+- [Getting help](#getting-help)
+- [HelloID docs](#helloid-docs)
   
 ---
 
@@ -46,7 +62,7 @@ https://developers.youforce.com/api-status
  - nameAssembleOrder  Letters(E,P,C,B,D)
 
 ## Raet IAM API documentation
-Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company and costcenter are not available for HR Core Beaufort customers.
+Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company is not available for HR Core Beaufort customers.
 - https://community.visma.com/t5/Kennisbank-Youforce-API/tkb-p/nl_ra_YF_API_knowledge/label-name/iam%20api
 - https://community.visma.com/t5/Kennisbank-Youforce-API/IAM-Domain-model-amp-field-mapping/ta-p/428102
 - https://vr-api-integration.github.io/SwaggerUI/IAM.html
@@ -55,31 +71,51 @@ Please see the following website about the Raet IAM API documentation. Also note
 ---
 
 ## Getting started
-Please note that you need to have an authorized Raet Developers account in order to request and receive the API credentials. See: https://developers.youforce.com
+### Connection settings
+The following settings are required to run the source import.
 
-Make sure your client does the IAM API access request themselves on behalf of your own Raet Developers account (don't use Tools4ever, but your own developer account)
-
-More info about Raet Developers Portal: https://youtu.be/M9RHvm_KMh0
+| Setting                                       | Description                                                               | Mandatory   |
+| --------------------------------------------- | ------------------------------------------------------------------------- | ----------- |
+| Client ID                                     | The Client ID to connect to the Raet IAM API.                             | Yes         |
+| Client Secret                                 | The Client Secret to connect to the Raet IAM API.                         | Yes         |
+| Tenant ID                                     | The Tenant ID to specify to which tenant to connect to the Raet IAM API.  | Yes         |
+| Include assignments                           | Include assignments yes/no.                                               | No          |
+| Include persons without assignments           | Include persons without assignments yes/no.                               | No          |
+| Exclude persons without contracts in HelloID  | Exclude persons without contracts in HelloID yes/no.                      | No          |
 
 ### Prerequisites
+ - Authorized Raet Developers account in order to request and receive the API credentials. See: https://developers.youforce.com. Make sure your client does the IAM API access request themselves on behalf of your own Raet Developers account (don't use Tools4ever, but your own developer account). More info about Raet Developers Portal: https://youtu.be/M9RHvm_KMh0
+- ClientID, ClientSecret and tenantID to authenticate with RAET IAM-API Webservice
 
- - [ ] ClientID, ClientSecret and tenantID to authenticate with RAET IAM-API Webservice
+### Remarks
+ - Currently, not all fields are available for HR Core Beaufort customers. For example: company.
 
+### Mappings
+A basic mapping is provided. Make sure to further customize these accordingly.
+Please choose the default mappingset to use with the configured configuration.
 
-### Configuration Settings
-Use the configuration.json in the Source Connector on "Custom connector configuration". You can use the created field on the Configuration Tab to set the ClientID, ClienSecret and tenantID. Also you can choose if you want to include the assignments from the IAM-API.
+When using only employments (not including assignments):
+- mapping.employments.json
+This mapping only uses fields available on employments and does not expect fields which would be available on the assignments.
 
-![image](./assets/configuration.png)
+When including assigments and excluding persons without contracts in HelloID (default setting):
+- mapping.assignments.json
+This mapping only uses fields available on assignments and does not expect fields which would be available on the assignments.
+If a person has no assignments, this will result in an import error. To solve this (without changing the mapping) select the option to "**Exclude persons without contracts in HelloID**".
 
-Please choose the default mappingset to use with the configured IAM-API configuration.
+When including assigments and not excluding persons without contracts in HelloID (default setting):
+- mapping.assignments.includePersonsWithoutAssignments.json
+This mapping uses fields available on assignments, if these are not available for a person it uses the fields available on the employments.
+If a person has no assignments & employments, this will result in an import error. To solve this (without changing the mapping) select the option to "**Exclude persons without contracts in HelloID**".
 
-For assignments:
-- personMapping_assigment.json
-- contractMapping_assignment.json
+### Scope
+The data collection retrieved by the queries is a default set which is sufficient for HelloID to provision persons.
+The queries can be changed by the customer itself to meet their requirements.
 
-For employments:
-- personMapping_employments.json
-- contractMapping_employments.json
+## Getting help
+> _For more information on how to configure a HelloID PowerShell connector, please refer to our [documentation](https://docs.helloid.com/hc/en-us/articles/360012558020-Configure-a-custom-PowerShell-target-system) pages_
 
-# HelloID Docs
+> _If you need help, feel free to ask questions on our [forum](https://forum.helloid.com)_
+
+## HelloID docs
 The official HelloID documentation can be found at: https://docs.helloid.com/

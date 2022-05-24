@@ -1,6 +1,6 @@
 [
   {
-    "key": "connection.clientId",
+    "key": "clientId",
     "type": "input",
     "defaultValue": "",
     "templateOptions": {
@@ -11,7 +11,7 @@
     }
   },
   {
-    "key": "connection.clientSecret",
+    "key": "clientSecret",
     "type": "input",
     "defaultValue": "",
     "templateOptions": {
@@ -22,7 +22,7 @@
     }
   },
   {
-    "key": "connection.tenantId",
+    "key": "tenantId",
     "type": "input",
     "defaultValue": "",
     "templateOptions": {
@@ -32,11 +32,29 @@
     }
   },
   {
-    "key": "switchIncludeAssignments",
+    "key": "includeAssignments",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
       "label": "Include assignments",
+      "required": false
+    }
+  },
+  {
+    "key": "includePersonsWithoutAssignments",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Include persons without assignments",
+      "required": false
+    }
+  },
+  {
+    "key": "excludePersonsWithoutContractsInHelloID",
+    "type": "checkbox",
+    "defaultValue": true,
+    "templateOptions": {
+      "label": "Exclude persons without contracts in HelloID",
       "required": false
     }
   }

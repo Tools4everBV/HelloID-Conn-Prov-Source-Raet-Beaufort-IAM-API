@@ -1,0 +1,214 @@
+{
+    "personMappings": [
+        {
+            "name": "Contact.Business.Email",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.BusinessEmailAddress !== 'undefined' && source.BusinessEmailAddress) {\r\n        returnValue = source.BusinessEmailAddress.address;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Contact.Business.Phone.Fixed",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.BusinessPhoneNumber !== 'undefined' && source.BusinessPhoneNumber) {\r\n        returnValue = source.BusinessPhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Contact.Business.Phone.Mobile",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.MobilePhoneNumber !== 'undefined' && source.MobilePhoneNumber) {\r\n        returnValue = source.MobilePhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Details.Gender",
+            "mode": "field",
+            "value": "gender",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "ExternalId",
+            "mode": "field",
+            "value": "ExternalId",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Name.Convention",
+            "mode": "complex",
+            "value": "function getValue() {\r\n    if(source.nameAssembleOrder == \"P\") {\r\n        return \"P\";\r\n    }\r\n    if(source.nameAssembleOrder == \"E\") {\r\n        return \"B\";\r\n    }\r\n    if(source.nameAssembleOrder == \"B\") {\r\n        return \"PB\";\r\n    }\r\n    if(source.nameAssembleOrder == \"C\" || source.nameAssembleOrder == \"D\") {\r\n        return \"BP\";\r\n    }\r\n}\r\n \r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Name.FamilyName",
+            "mode": "field",
+            "value": "lastNameAtBirth",
+            "validation": {
+                "required": true
+            }
+        },
+        {
+            "name": "Name.FamilyNamePartner",
+            "mode": "field",
+            "value": "partnerName",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Name.FamilyNamePartnerPrefix",
+            "mode": "field",
+            "value": "partnerNamePrefix",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Name.FamilyNamePrefix",
+            "mode": "field",
+            "value": "lastNameAtBirthPrefix",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Name.GivenName",
+            "mode": "field",
+            "value": "firstNames",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Name.Initials",
+            "mode": "field",
+            "value": "initials",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Name.NickName",
+            "mode": "field",
+            "value": "knownAs",
+            "validation": {
+                "required": true
+            }
+        }
+    ],
+    "contractMappings": [
+        {
+            "name": "CostCenter.Code",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterCode;\r\n    } else if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "CostCenter.ExternalId",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterCode;\r\n    } else if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "CostCenter.Name",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterName;\r\n    } else if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Department.DisplayName",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_organizationUnitName !== 'undefined' && sourceContract.assignment_organizationUnitName) {\r\n        returnValue = sourceContract.assignment_organizationUnitName;\r\n    } else if (typeof sourceContract.employment_organizationUnitName !== 'undefined' && sourceContract.employment_organizationUnitName) {\r\n        returnValue = sourceContract.employment_organizationUnitName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Department.ExternalId",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_organizationUnitCode !== 'undefined' && sourceContract.assignment_organizationUnitCode) {\r\n        returnValue = sourceContract.assignment_organizationUnitCode;\r\n    } else if (typeof sourceContract.employment_organizationUnitCode !== 'undefined' && sourceContract.employment_organizationUnitCode) {\r\n        returnValue = sourceContract.employment_organizationUnitCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Details.HoursPerWeek",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_workingAmount !== 'undefined' && sourceContract.assignment_workingAmount) {\r\n        returnValue = sourceContract.assignment_workingAmount.amountOfWork;\r\n    } else if (typeof sourceContract.employment_workingAmount !== 'undefined' && sourceContract.employment_workingAmount) {\r\n        returnValue = sourceContract.employment_workingAmount.amountOfWork;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "EndDate",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_endDate !== 'undefined' && sourceContract.assignment_endDate) {\r\n        returnValue = sourceContract.assignment_endDate;\r\n    } else if (typeof sourceContract.employment_dischargeDate !== 'undefined' && sourceContract.employment_dischargeDate) {\r\n        returnValue = sourceContract.employment_dischargeDate;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "ExternalId",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_id !== 'undefined' && sourceContract.assignment_id) {\r\n        returnValue = sourceContract.assignment_id;\r\n    } else if (typeof sourceContract.employment_contractId !== 'undefined' && sourceContract.employment_contractId) {\r\n        returnValue = sourceContract.employment_contractId;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Organization.ExternalId",
+            "mode": "field",
+            "value": "employment_company",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Organization.Name",
+            "mode": "field",
+            "value": "employment_company",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "StartDate",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_startDate !== 'undefined' && sourceContract.assignment_startDate) {\r\n        returnValue = sourceContract.assignment_startDate;\r\n    } else if (typeof sourceContract.employment_hireDate !== 'undefined' && sourceContract.employment_hireDate) {\r\n        returnValue = sourceContract.employment_hireDate;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Title.ExternalId",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_jobProfile !== 'undefined' && sourceContract.assignment_jobProfile) {\r\n        returnValue = sourceContract.assignment_jobProfile.shortName;\r\n    } else if (typeof sourceContract.employment_jobProfile !== 'undefined' && sourceContract.employment_jobProfile) {\r\n        returnValue = sourceContract.employment_jobProfile.shortName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Title.Name",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_jobProfile !== 'undefined' && sourceContract.assignment_jobProfile) {\r\n        returnValue = sourceContract.assignment_jobProfile.fullName;\r\n    } else if (typeof sourceContract.employment_jobProfile !== 'undefined' && sourceContract.employment_jobProfile) {\r\n        returnValue = sourceContract.employment_jobProfile.fullName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        }
+    ]
+}

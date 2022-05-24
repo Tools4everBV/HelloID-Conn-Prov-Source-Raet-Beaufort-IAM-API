@@ -1,9 +1,20 @@
-$config = $configuration | ConvertFrom-Json
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
-$clientId = $config.connection.clientId
-$clientSecret = $config.connection.clientSecret
-$tenantId = $config.connection.tenantId
-$includeAssignments = $config.switchIncludeAssignments
+$VerbosePreference = "SilentlyContinue"
+$InformationPreference = "Continue"
+$WarningPreference = "Continue"
+
+$c = $configuration | ConvertFrom-Json
+
+$clientId = $c.clientId
+$clientSecret = $c.clientSecret
+$tenantId = $c.tenantId
+$includeAssignments = $c.includeAssignments
+$includePersonsWithoutAssignments = $c.includePersonsWithoutAssignments
+$excludePersonsWithoutContractsInHelloID = $c.excludePersonsWithoutContractsInHelloID
+
+$Script:BaseUrl = "https://api.raet.com/iam/v1.0"
 
 function New-RaetSession {
     [CmdletBinding()]
@@ -50,9 +61,11 @@ function New-RaetSession {
     catch {
         if ($_.Exception.Response.StatusCode -eq "Forbidden") {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
-        } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
+        }
+        elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'"
-        } else {
+        }
+        else {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'"
         }
         throw $errorMessage
@@ -83,7 +96,7 @@ function Invoke-RaetWebRequestList {
                 $SkipTakeUrl = $resultSubset.nextLink.Substring($resultSubset.nextLink.IndexOf("?"))
             }
             $counter++
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
             $accessTokenValid = Confirm-AccessTokenIsValid
             if ($accessTokenValid -ne $true) {
                 New-RaetSession -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId
@@ -96,9 +109,11 @@ function Invoke-RaetWebRequestList {
     catch {
         if ($_.Exception.Response.StatusCode -eq "Forbidden") {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
-        } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
+        }
+        elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'"
-        } else {
+        }
+        else {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'"
         }
         throw $errorMessage
@@ -106,212 +121,264 @@ function Invoke-RaetWebRequestList {
     return $ReturnValue
 }
 
-function Get-RaetPersonDataList {
-    [CmdletBinding()]
-    param ()
+Write-Information "Starting person import"
 
-    $Script:BaseUrl = "https://api.raet.com/iam/v1.0"
+# Query persons
+try {
+    Write-Verbose "Querying persons"
 
+    $persons = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/employees"
+    # Make sure persons are unique
+    $persons = $persons | Sort-Object id -Unique
+
+    Write-Information "Successfully queried persons. Result: $($persons.Count)"
+}
+catch {
+    throw "Could not retrieve persons. Error: $($_.Exception.Message)"
+}
+
+# Query jobProfiles
+try {
+    Write-Verbose "Querying jobProfiles"
+    
+    $jobProfiles = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/jobProfiles"
+    # Filter for only active jobProfiles
+    $ActiveCompareDate = Get-Date
+    $jobProfiles = $jobProfiles | Where-Object { $_.isActive -ne $false -and
+        (([Datetime]::ParseExact($_.validFrom, 'yyyy-MM-dd', $null)) -le $ActiveCompareDate) -and
+        (([Datetime]::ParseExact($_.validUntil, 'yyyy-MM-dd', $null)) -ge $ActiveCompareDate) }
+    # Group by id
+    $jobProfilesGrouped = $jobProfiles | Group-Object Id -AsHashTable
+
+    Write-Information "Successfully queried jobProfiles. Result: $($jobProfiles.Count)"
+}
+catch {
+    throw "Could not retrieve jobProfiles. Error: $($_.Exception.Message)"
+}
+
+# Query costAllocations
+try {
+    Write-Verbose "Querying costAllocations"
+    
+    $costAllocations = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/costAllocations"
+    # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
+    $costAllocations | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+    $costAllocations | Foreach-Object {
+        $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+    }
+    # Group by ExternalId
+    $costAllocationsGrouped = $costAllocations | Group-Object ExternalId -AsHashTable
+
+    Write-Information "Successfully queried costAllocations. Result: $($costAllocations.Count)"
+}
+catch {
+    throw "Could not retrieve costAllocations. Error: $($_.Exception.Message)"
+}
+
+# Query assignments
+if ($true -eq $includeAssignments) {
     try {
-        $ActiveCompareDate = Get-Date
+        Write-Verbose "Querying assignments"
+        
+        $assignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/assignments"
 
-        $persons = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/employees"
-
-        # Make sure persons are unique
-        $persons = $persons | Sort-Object id -Unique
-
-        $jobProfiles = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/jobProfiles"
-        $jobProfiles = $jobProfiles | Select-Object * -ExcludeProperty extensions
-        $jobProfiles = $jobProfiles | Where-Object {$_.isActive -ne $false}
-        $jobProfiles = $jobProfiles | Where-Object {
-                ($ActiveCompareDate -ge ([Datetime]::ParseExact($_.validFrom, 'yyyy-MM-dd', $null))) -and
-                (([Datetime]::ParseExact($_.validUntil, 'yyyy-MM-dd', $null)) -ge $ActiveCompareDate)
+        # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
+        $assignments | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+        $assignments | Foreach-Object {
+            $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
         }
-        $jobProfileGrouped = $jobProfiles | Group-Object Id -AsHashTable
+        # Group by ExternalId
+        $assignmentsGrouped = $assignments | Group-Object ExternalId -AsHashTable
 
-        # fetch the CostAllocations, linking key is PersonCode + "_" + employmentCode
-        $costCenters = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/costAllocations"
-        $costCenters | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
-        foreach ($costCenter in $costCenters) {
-            $costCenter.ExternalId = $costCenter.PersonCode + "_" + $costCenter.employmentCode
-        }
-        $costCentersGrouped = $costCenters | Group-Object ExternalId -AsHashTable
-
-        if($true -eq $includeAssignments){
-            $assignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/assignments"
-
-            $assignmentHashtable = @{}
-            foreach ($record in $assignments) {
-                $tmpKey = $record.personCode + "_" + $record.employmentCode
-                if (![string]::IsNullOrEmpty($tmpKey)) {
-                    if($assignmentHashtable.Contains($tmpKey)) {
-                        $assignmentHashtable.$tmpKey += ($record)
-                    } else {
-                        $assignmentHashtable.Add($tmpKey, @($record))
-                    }
-                }
-            }
-        }
-
-        # Extend the persons model
-        $persons | Add-Member -MemberType NoteProperty -Name "BusinessEmailAddress" -Value $null -Force
-        $persons | Add-Member -MemberType NoteProperty -Name "PrivateEmailAddress" -Value $null -Force
-        $persons | Add-Member -MemberType NoteProperty -Name "BusinessPhoneNumber" -Value $null -Force
-        $persons | Add-Member -MemberType NoteProperty -Name "MobilePhoneNumber" -Value $null -Force
-        $persons | Add-Member -MemberType NoteProperty -Name "HomePhoneNumber" -Value $null -Force
-
-        foreach ($person in $persons) {
-            #Validate the required person fields
-            $person | Add-Member -Name "ExternalId" -MemberType NoteProperty -Value $person.personCode
-
-            if ([String]::IsNullOrEmpty($person.knownAs) -and [String]::IsNullOrEmpty($person.lastNameAtBirth)) {
-                $displayName = $person.personCode
-            } else {
-                $displayName = ($person.knownAs + ' ' + $person.lastNameAtBirth)
-            }
-            $person | Add-Member -Name "DisplayName" -MemberType NoteProperty -Value $displayName
-
-            $contracts = New-Object System.Collections.Generic.List[System.Object]
-            foreach ($employment in $person.employments) {
-                $jobProfile = $jobProfileGrouped["$($employment.jobProfile)"]
-
-                if($true -eq $includeAssignments){
-                    # Create Contract object(s) based on assignments
-                    $lookingFor = $person.personCode + "_" + $employment.employmentCode
-                    #$personAssignments = $assignmentsGrouped[$person.personCode + "_" + $employment.employmentCode]
-
-                    $personAssignments = $assignmentHashtable.$lookingFor
-                    foreach($assignment in $personAssignments){
-                        if ($assignment.employmentCode -eq $employment.employmentCode) {
-                            $jobProfile = $jobProfileGrouped["$($assignment.jobProfile)"]
-                            
-                            $costCenter = $costCentersGrouped["$($assignment.personCode)_$($assignment.employmentCode)"]
-                            if ($costCenter.Count -gt 1) {
-                                $costCenter = $costCenter | Where-Object {$_.sequenceNumber -eq 0}
-                            }
-                            #Contract result object used in HelloID
-                            $Contract = [PSCustomObject]@{
-                                ExternalId       = $assignment.id
-                                EmploymentType   = @{
-                                    ShortName = $employment.employmentType
-                                    FullName  = $null
-                                }
-                                PersonCode       = $person.personCode
-                                EmploymentCode   = $employment.employmentCode
-                                StartDate        = $assignment.startDate
-                                EndDate          = $assignment.endDate
-                                DischargeDate    = $employment.dischargeDate
-                                HireDate         = $employment.hireDate
-                                JobProfile       = @{
-                                    ShortName = $assignment.jobProfile
-                                    FullName  = $($jobProfile.fullName)
-                                }
-                                WorkingAmount    = @{
-                                    AmountOfWork = $assignment.workingAmount.amountOfWork
-                                    UnitOfWork   = $assignment.workingAmount.unitOfWork
-                                    PeriodOfWork = $assignment.workingAmount.periodOfWork
-                                }
-                                OrganizationUnit = @{
-                                    ShortName = $assignment.organizationUnit
-                                    FullName  = $null
-                                }
-                                CostCenter       = @{
-                                    ShortName = $($costCenter.costCenterCode)
-                                    FullName  = $($costCenter.CostCenterName)
-                                    Type      = $($costCenter.costTypeCode)
-                                    TypeDesc  = $($costCenter.CostTypeName)
-                                }
-                            }
-                            $contracts.add($Contract)
-                        }
-                    }
-                }else{
-                    # Create Contract object(s) based on employments
-
-                    $costCenter = $costCentersGrouped["$($employment.personCode)_$($employment.employmentCode)"]
-                    if ($costCenter.Count -gt 1) {
-                        $costCenter = $costCenter | Where-Object {$_.sequenceNumber -eq 0}
-                    }
-                    #Contract result object used in HelloID
-                    $Contract = [PSCustomObject]@{
-                        ExternalId       = $person.personCode + '_' + $employment.employmentCode
-                        EmploymentType   = @{
-                            ShortName = $employment.employmentType
-                            FullName  = $null
-                        }
-                        PersonCode       = $person.personCode
-                        EmploymentCode   = $employment.employmentCode
-                        StartDate        = $employment.hireDate
-                        EndDate          = $employment.dischargeDate
-                        DischargeDate    = $employment.dischargeDate
-                        HireDate         = $employment.hireDate
-                        JobProfile       = @{
-                            ShortName = $employment.jobProfile
-                            FullName  = $($jobProfile.fullName)
-                        }
-                        WorkingAmount    = @{
-                            AmountOfWork = $employment.workingAmount.amountOfWork
-                            UnitOfWork   = $employment.workingAmount.unitOfWork
-                            PeriodOfWork = $employment.workingAmount.periodOfWork
-                        }
-                        OrganizationUnit = @{
-                            ShortName = $employment.organizationUnit
-                            FullName  = $null
-                        }
-                        CostCenter       = @{
-                            ShortName = $($costCenter.costCenterCode)
-                            FullName  = $($costCenter.CostCenterName)
-                            Type      = $($costCenter.costTypeCode)
-                            TypeDesc  = $($costCenter.CostTypeName)
-                        }
-                    }
-                    $contracts.add($Contract)
-                }
-
-                $person | Add-Member -Name "Contracts" -MemberType NoteProperty -Value $contracts -Force
-
-                # Add emailAddresses to the person
-                foreach ($emailAddress in $person.emailAddresses) {
-                    if (![string]::IsNullOrEmpty($emailAddress)) {
-                        if ($emailAddress.type -eq "Business") {
-                            $person.BusinessEmailAddress = $emailAddress.address
-                        }
-                        if ($emailAddress.type -eq "Private") {
-                            $person.PrivateEmailAddress = $emailAddress.address
-                        }
-                    }
-                }
-
-                # Add phoneNumbers  to the person
-                foreach ($phoneNumber in $person.phoneNumbers) {
-                    if (![string]::IsNullOrEmpty($phoneNumber)) {
-                        if ($phoneNumber.type -eq "Business") {
-                            $person.BusinessPhoneNumber = $phoneNumber.number
-                        }
-                        if ($phoneNumber.type -eq "Mobile") {
-                            $person.MobilePhoneNumber = $phoneNumber.number
-                        }
-                        if ($phoneNumber.type -eq "Home") {
-                            $person.HomePhoneNumber = $phoneNumber.number
-                        }
-                    }
-                }
-
-                #Extend the person model using the person field extensions
-                foreach ($extension in $person.extensions) {
-                    $person | Add-Member -Name $person.extensions.key -MemberType NoteProperty -Value $person.extensions.value -Force
-                }
-            }
-
-            Write-Output $person | ConvertTo-Json -Depth 10
-        }
-
-        Write-Verbose -Verbose "Persons import completed: $($persons.count)"
+        Write-Information "Successfully queried assignments. Result: $($assignments.Count)"
     }
     catch {
-        Throw "Could not Get-RaetPersonDataList, message: $($_.Exception.Message)"
+        throw "Could not retrieve assignments. Error: $($_.Exception.Message)"
     }
 }
 
-#call the Get-RaetPersonDataList function to get the data from the API
-Get-RaetPersonDataList
+try {
+    # Enhance the persons model
+    $persons | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+    $persons | Add-Member -MemberType NoteProperty -Name "DisplayName" -Value $null -Force
+    $persons | Add-Member -MemberType NoteProperty -Name "Contracts" -Value $null -Force
+
+    $persons | ForEach-Object {
+        # Set required fields for HelloID
+        $_.ExternalId = $_.personCode
+        $_.DisplayName = "$($_.knownAs) $($_.lastNameAtBirth) ($($_.ExternalId))" 
+
+        # Transform emailAddresses and add to the person
+        if ($null -ne $_.emailAddresses) {
+            foreach ($emailAddress in $_.emailAddresses) {
+                if (![string]::IsNullOrEmpty($emailAddress)) {
+                    # Add a property for each type of EmailAddress
+                    $_ | Add-Member -MemberType NoteProperty -Name "$($emailAddress.type)EmailAddress" -Value $emailAddress -Force
+                }
+            }
+
+            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
+            # Remove customFieldGroup, since the data is transformed into seperate properties
+            $_.PSObject.Properties.Remove('emailAddresses')
+        }
+
+        # Transform phoneNumbers and add to the person
+        if ($null -ne $_.phoneNumbers) {
+            foreach ($phoneNumber in $_.phoneNumbers) {
+                if (![string]::IsNullOrEmpty($phoneNumber)) {
+                    # Add a property for each type of PhoneNumber
+                    $_ | Add-Member -MemberType NoteProperty -Name "$($phoneNumber.type)PhoneNumber" -Value $phoneNumber -Force
+                }
+            }
+
+            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
+            # Remove phoneNumbers, since the data is transformed into seperate properties
+            $_.PSObject.Properties.Remove('phoneNumbers')
+        }
+
+        # Transform addresses and add to the person
+        if ($null -ne $_.addresses) {
+            foreach ($address in $_.addresses) {
+                if (![string]::IsNullOrEmpty($address)) {
+                    # Add a property for each type of address
+                    $_ | Add-Member -MemberType NoteProperty -Name "$($address.type)Address" -Value $address -Force
+                }
+            }
+
+            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
+            # Remove addresses, since the data is transformed into seperate properties
+            $_.PSObject.Properties.Remove('addresses')
+        }
+
+        # Transform extensions and add to the person
+        if ($null -ne $_.extensions) {
+            foreach ($extension in $_.extensions) {
+                # Add a property for each extension
+                $_ | Add-Member -Name $_.extensions.key -MemberType NoteProperty -Value $_.extensions.value -Force
+            }
+
+            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
+            # Remove extensions, since the data is transformed into seperate properties
+            $_.PSObject.Properties.Remove('extensions')
+        }
+
+        # Create contracts object
+        $contractsList = [System.Collections.ArrayList]::new()
+        if ($null -ne $_.employments) {
+            foreach ($employment in $_.employments) {
+                # Enhance employment with jobProfile for for extra information, such as: fullName
+                $jobProfile = $jobProfilesGrouped["$($employment.jobProfile)"]
+                if ($null -ne $jobProfile) {
+                    # In the case multiple jobProfiles are found with the same ID, we always select the first one in the array
+                    $employment | Add-Member -MemberType NoteProperty -Name "jobProfile" -Value $jobProfile[0] -Force
+                }
+
+                # Enhance employment with costAllocation for for extra information, such as: fullName
+                # Get costAllocation for employment, linking key is PersonCode + "_" + employmentCode
+                $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                if ($null -ne $costAllocation) {
+                    # In the case multiple costAllocations are found with the same ID, we always select the first one in the array
+                    $employment | Add-Member -MemberType NoteProperty -Name "costAllocation" -Value $costAllocation[0] -Force
+                }
+
+                if ($false -eq $includeAssignments) {
+                    # Create Contract object(s) based on employments
+
+                    # Create custom employment object to include prefix of properties
+                    $employmentObject = [PSCustomObject]@{}
+                    $employment.psobject.properties | ForEach-Object {
+                        $employmentObject | Add-Member -MemberType $_.MemberType -Name "employment_$($_.Name)" -Value $_.Value -Force
+                    }
+
+                    [Void]$contractsList.Add($employmentObject)
+                }
+                else {
+                    # Create Contract object(s) based on assignments
+    
+                    # Get assignments for employment, linking key is PersonCode + "_" + employmentCode
+                    $assignments = $assignmentsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+    
+                    # Add assignment and employment data to contracts
+                    if ($null -ne $assignments) {
+                        foreach ($assignment in $assignments) {
+                            # Enhance assignment with jobProfile for for extra information, such as: fullName
+                            $jobProfile = $jobProfilesGrouped["$($assignment.jobProfile)"]
+                            if ($null -ne $jobProfile) {
+                                # In the case multiple jobProfiles are found with the same ID, we always select the first one in the array
+                                $assignment | Add-Member -MemberType NoteProperty -Name "jobProfile" -Value $jobProfile[0] -Force
+                            }
+
+                            # Enhance assignment with costAllocation for for extra information, such as: fullName
+                            # Get costAllocation for assignment, linking key is PersonCode + "_" + assignmentCode
+                            $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $assignment.employmentCode)]
+                            if ($null -ne $costAllocation) {
+                                # In the case multiple costAllocations are found with the same ID, we always select the first one in the array
+                                $assignment | Add-Member -MemberType NoteProperty -Name "costAllocation" -Value $costAllocation[0] -Force
+                            }
+
+                            # Create custom assignment object to include prefix in properties
+                            $assignmentObject = [PSCustomObject]@{}
+    
+                            # Add employment object with prefix for property names
+                            $employment.psobject.properties | ForEach-Object {
+                                $assignmentObject | Add-Member -MemberType $_.MemberType -Name "employment_$($_.Name)" -Value $_.Value -Force
+                            }
+    
+                            # Add position object with prefix for property names
+                            $assignment.psobject.properties | ForEach-Object {
+                                $assignmentObject | Add-Member -MemberType $_.MemberType -Name "assignment_$($_.Name)" -Value $_.Value -Force
+                            }
+    
+                            # Add employment and position data to contracts
+                            [Void]$contractsList.Add($assignmentObject)
+                        }
+                    }
+                    else {
+                        if ($true -eq $includePersonsWithoutAssignments) {
+                            # Add employment only data to contracts (in case of employments without assignments)
+
+                            # Create custom employment object to include prefix of properties
+                            $employmentObject = [PSCustomObject]@{}
+                            $employment.psobject.properties | ForEach-Object {
+                                $employmentObject | Add-Member -MemberType $_.MemberType -Name "employment_$($_.Name)" -Value $_.Value -Force
+                            }
+        
+                            [Void]$contractsList.Add($employmentObject)
+                        }
+                    }
+                }
+            }
+
+            # Remove unneccesary fields from object (to avoid unneccesary large objects)
+            # Remove employments, since the data is transformed into a seperate object: contracts
+            $_.PSObject.Properties.Remove('employments')
+        }
+        else {
+            ### Be very careful when logging in a loop, only use this when the amount is below 100
+            ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
+            # Write-Warning "No employments found for person: $($_.ExternalId)"
+        }
+
+        # Add Contracts to person
+        if ($contractsList.Count -ge 1) {
+            $_.Contracts = $contractsList
+        } elseif($true -eq $excludePersonsWithoutContractsInHelloID){
+            ### Be very careful when logging in a loop, only use this when the amount is below 100
+            ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
+            # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Person has no contract data"
+            return
+        }
+
+        # Sanitize and export the json
+        $person = $_ | ConvertTo-Json -Depth 10
+        $person = $person.Replace("._", "__")
+
+        Write-Output $person
+    }
+
+    Write-Information "Person import completed"
+}
+catch {
+    Write-Error "Error at line: $($_.InvocationInfo.PositionMessage)"
+    throw "Error: $_"
+}

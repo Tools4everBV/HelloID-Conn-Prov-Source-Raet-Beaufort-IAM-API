@@ -2,24 +2,24 @@
     "personMappings": [
         {
             "name": "Contact.Business.Email",
-            "mode": "field",
-            "value": "BusinessEmailAddress",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.BusinessEmailAddress !== 'undefined' && source.BusinessEmailAddress) {\r\n        returnValue = source.BusinessEmailAddress.address;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "Contact.Business.Phone.Fixed",
-            "mode": "field",
-            "value": "BusinessPhoneNumber",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.BusinessPhoneNumber !== 'undefined' && source.BusinessPhoneNumber) {\r\n        returnValue = source.BusinessPhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "Contact.Business.Phone.Mobile",
-            "mode": "field",
-            "value": "MobilePhoneNumber",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.MobilePhoneNumber !== 'undefined' && source.MobilePhoneNumber) {\r\n        returnValue = source.MobilePhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -107,9 +107,33 @@
     ],
     "contractMappings": [
         {
+            "name": "CostCenter.Code",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "CostCenter.ExternalId",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "CostCenter.Name",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
             "name": "Department.DisplayName",
             "mode": "field",
-            "value": "OrganizationUnit.FullName",
+            "value": "employment_organizationUnitName",
             "validation": {
                 "required": false
             }
@@ -117,7 +141,7 @@
         {
             "name": "Department.ExternalId",
             "mode": "field",
-            "value": "OrganizationUnit.ShortName",
+            "value": "employment_organizationUnitCode",
             "validation": {
                 "required": false
             }
@@ -125,7 +149,7 @@
         {
             "name": "Details.HoursPerWeek",
             "mode": "field",
-            "value": "WorkingAmount.AmountOfWork",
+            "value": "employment_workingAmount.amountOfWork",
             "validation": {
                 "required": false
             }
@@ -133,7 +157,7 @@
         {
             "name": "EndDate",
             "mode": "field",
-            "value": "DischargeDate",
+            "value": "employment_endDate",
             "validation": {
                 "required": false
             }
@@ -141,7 +165,7 @@
         {
             "name": "ExternalId",
             "mode": "field",
-            "value": "ExternalId",
+            "value": "employment_id",
             "validation": {
                 "required": false
             }
@@ -149,7 +173,7 @@
         {
             "name": "Organization.ExternalId",
             "mode": "field",
-            "value": "OrganizationUnit.ShortName",
+            "value": "employment_company",
             "validation": {
                 "required": false
             }
@@ -157,7 +181,7 @@
         {
             "name": "Organization.Name",
             "mode": "field",
-            "value": "OrganizationUnit.FullName",
+            "value": "employment_company",
             "validation": {
                 "required": false
             }
@@ -165,7 +189,7 @@
         {
             "name": "StartDate",
             "mode": "field",
-            "value": "HireDate",
+            "value": "employment_startDate",
             "validation": {
                 "required": false
             }
@@ -173,7 +197,7 @@
         {
             "name": "Title.ExternalId",
             "mode": "field",
-            "value": "JobProfile.ShortName",
+            "value": "employment_jobProfile.shortName",
             "validation": {
                 "required": false
             }
@@ -181,31 +205,7 @@
         {
             "name": "Title.Name",
             "mode": "field",
-            "value": "JobProfile.FullName",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostCenter.ExternalId",
-            "mode": "field",
-            "value": "costCenter.ShortName",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostCenter.Code",
-            "mode": "field",
-            "value": "costCenter.ShortName",
-            "validation": {
-                "required": false
-            }
-        },
-        {
-            "name": "CostCenter.Name",
-            "mode": "field",
-            "value": "costCenter.FullName",
+            "value": "employment_jobProfile.fullName",
             "validation": {
                 "required": false
             }

@@ -1,8 +1,17 @@
-$config = $configuration | ConvertFrom-Json
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
-$clientId = $config.connection.clientId
-$clientSecret = $config.connection.clientSecret
-$tenantId = $config.connection.tenantId
+$VerbosePreference = "SilentlyContinue"
+$InformationPreference = "Continue"
+$WarningPreference = "Continue"
+
+$c = $configuration | ConvertFrom-Json
+
+$clientId = $c.clientId
+$clientSecret = $c.clientSecret
+$tenantId = $c.tenantId
+
+$Script:BaseUrl = "https://api.raet.com/iam/v1.0"
 
 function New-RaetSession {
     [CmdletBinding()]
@@ -41,17 +50,19 @@ function New-RaetSession {
         $Script:expirationTimeAccessToken = (Get-Date).AddSeconds($accessToken.expires_in)
 
         $Script:AuthenticationHeaders = @{
-            'X-Client-Id'      = $ClientId;
-            'Authorization'    = "Bearer $($accessToken.access_token)";
-            'X-Raet-Tenant-Id' = $TenantId;
-
+            'X-Client-Id'      = $ClientId
+            'Authorization'    = "Bearer $($accessToken.access_token)"
+            'X-Raet-Tenant-Id' = $TenantId
         }
-    } catch {
+    }
+    catch {
         if ($_.Exception.Response.StatusCode -eq "Forbidden") {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
-        } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
+        }
+        elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'"
-        } else {
+        }
+        else {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'"
         }
         throw $errorMessage
@@ -75,12 +86,6 @@ function Invoke-RaetWebRequestList {
         $Url
     )
     try {
-        $accessTokenValid = Confirm-AccessTokenIsValid
-        if($accessTokenValid -ne $true)
-        {
-            New-RaetSession -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId
-        }
-
         [System.Collections.ArrayList]$ReturnValue = @()
         $counter = 0
         do {
@@ -88,18 +93,24 @@ function Invoke-RaetWebRequestList {
                 $SkipTakeUrl = $resultSubset.nextLink.Substring($resultSubset.nextLink.IndexOf("?"))
             }
             $counter++
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+            $accessTokenValid = Confirm-AccessTokenIsValid
+            if ($accessTokenValid -ne $true) {
+                New-RaetSession -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId
+            }
             $result = Invoke-WebRequest -Uri $Url$SkipTakeUrl -Method GET -ContentType "application/json" -Headers $Script:AuthenticationHeaders -UseBasicParsing
             $resultSubset = (ConvertFrom-Json  $result.Content)
             $ReturnValue.AddRange($resultSubset.value)
-        }until([string]::IsNullOrEmpty($resultSubset.nextLink))
+        } until([string]::IsNullOrEmpty($resultSubset.nextLink))
     }
     catch {
         if ($_.Exception.Response.StatusCode -eq "Forbidden") {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
-        } elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
+        }
+        elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'"
-        } else {
+        }
+        else {
             $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'"
         }
         throw $errorMessage
@@ -107,59 +118,77 @@ function Invoke-RaetWebRequestList {
     return $ReturnValue
 }
 
-function Get-RaetOrganizationUnitsList {
-    $Script:BaseUrl = "https://api.raet.com/iam/v1.0"
+Write-Information "Starting department import"
 
-    try {
-        Write-Verbose -Verbose "Department import starting";
+# Query organizationUnits
+try {
+    Write-Verbose "Querying organizationUnits"
 
-        $organizationalUnits = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/organizationUnits"
-        $roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
-        # Sort Role assignments on personCode to make sure we always have the same manager with the same data
-        $roleAssignments = $roleAssignments | Sort-Object -Property { [int]$_.personCode }
+    $organizationUnits = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/organizationUnits"
 
-        $managerActiveCompareDate = Get-Date
+    Write-Information "Successfully queried organizationUnits. Result: $($organizationUnits.Count)"
+}
+catch {
+    throw "Could not retrieve organizationUnits. Error: $($_.Exception.Message)"
+}
 
-        [System.Collections.ArrayList]$departments =  @()
-        foreach($item in $organizationalUnits)
-        {
-            $ouRoleAssignments = foreach($roleAssignment in $roleAssignments){
-                if($roleAssignment.organizationUnit -eq $item.id){
-                    $roleAssignment
-                }
-            }
+# Query roleAssignments
+try {
+    Write-Verbose "Querying roleAssignments"
 
-            $managerId = $null
-            $ExternalIdOu = $item.id
-            foreach ($roleAssignment in $ouRoleAssignments) {
-                if (![string]::IsNullOrEmpty($roleAssignment)) {
-                    if ($roleAssignment.ShortName -eq 'MGR') {
-                        $startDate = ([Datetime]::ParseExact($roleAssignment.startDate, 'yyyy-MM-dd', $null))
-                        $endDate = ([Datetime]::ParseExact($roleAssignment.endDate, 'yyyy-MM-dd', $null))
+    $roleAssignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/roleAssignments"
+    # Sort Role assignments on personCode to make sure we always have the same manager with the same data
+    $roleAssignments = $roleAssignments | Sort-Object -Property { [int]$_.personCode }
 
-                        if($managerActiveCompareDate -ge $startDate -and $endDate -ge $managerActiveCompareDate ){
-                            $managerId = $roleAssignment.personCode
-                            break
-                        }
+    Write-Information "Successfully queried roleAssignments. Result: $($roleAssignments.Count)"
+}
+catch {
+    throw "Could not retrieve roleAssignments. Error: $($_.Exception.Message)"
+}
+
+try {
+    $managerActiveCompareDate = Get-Date
+
+    foreach ($organizationUnit in $organizationUnits) {
+        $ouRoleAssignments = $roleAssignments | Where-Object { $_.organizationUnit -eq $organizationUnit.id }
+        # Sort role assignments on person code to make sure the order is always the same (if the data is the same)
+        $ouRoleAssignments = $ouRoleAssignments | Sort-Object personCode
+
+        # Organizational units may contain multiple managers (per organizational unit). There's no way to specify which manager is primary
+        # We check of the manager assignment is active and then select the first one we come across that's valid
+        $managerId = $null
+        foreach ($roleAssignment in $ouRoleAssignments) {
+            if (![string]::IsNullOrEmpty($roleAssignment)) {
+                if ($roleAssignment.ShortName -eq 'MGR') {
+                    $startDate = ([Datetime]::ParseExact($roleAssignment.startDate, 'yyyy-MM-dd', $null))
+                    $endDate = ([Datetime]::ParseExact($roleAssignment.endDate, 'yyyy-MM-dd', $null))
+
+                    if ($startDate -lt $managerActiveCompareDate -and $endDate -ge $managerActiveCompareDate ) {
+                        $managerId = $roleAssignment.personCode
+                        break
                     }
                 }
             }
-
-            $organizationUnit = [PSCustomObject]@{
-                ExternalId=$ExternalIdOu
-                ShortName=$item.shortName
-                DisplayName=$item.fullName
-                ManagerExternalId=$managerId
-                ParentExternalId=$item.parentOrgUnit
-            }
-            $null = $departments.Add($organizationUnit)
         }
-        Write-Verbose -Verbose "Department import completed"
-        Write-Output $departments | ConvertTo-Json -Depth 10
-    } catch {
-        throw "Could not Get-OrganizationUnitsList, message: $($_.Exception.Message)"
-    }
-}
 
-#call the Get-RaetOrganizationUnitsList function to get the data from the API
-Get-RaetOrganizationUnitsList
+        $department = [PSCustomObject]@{
+            ExternalId        = $organizationUnit.shortName
+            ShortName         = $organizationUnit.shortName
+            DisplayName       = $organizationUnit.fullName
+            ManagerExternalId = $managerId
+            ParentExternalId  = $organizationUnit.parentOrgUnit
+        }
+
+        # Sanitize and export the json
+        $department = $department | ConvertTo-Json -Depth 10
+        $department = $department.Replace("._", "__")
+
+        Write-Output $department
+    }
+
+    Write-Information "Department import completed"
+}
+catch {
+    Write-Error "Error at line: $($_.InvocationInfo.PositionMessage)"
+    throw "Error: $_"
+}
