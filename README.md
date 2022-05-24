@@ -46,7 +46,7 @@ https://developers.youforce.com/api-status
  - nameAssembleOrder  Letters(E,P,C,B,D)
 
 ## Raet IAM API documentation
-Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company and costcenter are not available for HR Core Beaufort customers.
+Please see the following website about the Raet IAM API documentation. Also note that not all HR fields are available depending on the used HR Core by your customer; HR Core Beaufort or HR Core Business. For example; company is not available for HR Core Beaufort customers.
 - https://community.visma.com/t5/Kennisbank-Youforce-API/tkb-p/nl_ra_YF_API_knowledge/label-name/iam%20api
 - https://community.visma.com/t5/Kennisbank-Youforce-API/IAM-Domain-model-amp-field-mapping/ta-p/428102
 - https://vr-api-integration.github.io/SwaggerUI/IAM.html
