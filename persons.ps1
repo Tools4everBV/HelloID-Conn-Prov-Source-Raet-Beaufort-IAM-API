@@ -254,7 +254,7 @@ try {
         if ($null -ne $_.extensions) {
             foreach ($extension in $_.extensions) {
                 # Add a property for each extension
-                $_ | Add-Member -Name $_.extensions.key -MemberType NoteProperty -Value $_.extensions.value -Force
+                $_ | Add-Member -Name $extension.key -MemberType NoteProperty -Value $extension.value -Force
             }
 
             # Remove unneccesary fields from  object (to avoid unneccesary large objects)
