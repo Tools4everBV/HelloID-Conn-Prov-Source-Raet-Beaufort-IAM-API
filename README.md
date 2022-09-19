@@ -11,6 +11,7 @@
 ## Versioning
 | Version | Description | Date |
 | - | - | - |
+| 1.1.1   | Updated to handle too many request errors | 2022/09/19  |
 | 1.1.0   | Updated perforance and logging | 2022/05/24  |
 | 1.0.0   | Initial release | 2020/08/18  |
 
