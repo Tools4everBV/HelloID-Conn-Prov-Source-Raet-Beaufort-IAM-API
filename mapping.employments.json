@@ -157,7 +157,7 @@
         {
             "name": "EndDate",
             "mode": "field",
-            "value": "employment_endDate",
+            "value": "employment_dischargeDate",
             "validation": {
                 "required": false
             }
@@ -189,7 +189,7 @@
         {
             "name": "StartDate",
             "mode": "field",
-            "value": "employment_startDate",
+            "value": "employment_hireDate",
             "validation": {
                 "required": false
             }

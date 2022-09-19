@@ -1,11 +1,20 @@
-# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+#####################################################
+# HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Persons
+#
+# Version: 1.1.1
+#####################################################
+$c = $configuration | ConvertFrom-Json
 
-$VerbosePreference = "SilentlyContinue"
+# Set debug logging
+switch ($($c.isDebug)) {
+    $true { $VerbosePreference = 'Continue' }
+    $false { $VerbosePreference = 'SilentlyContinue' }
+}
 $InformationPreference = "Continue"
 $WarningPreference = "Continue"
 
-$c = $configuration | ConvertFrom-Json
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 $clientId = $c.clientId
 $clientSecret = $c.clientSecret
@@ -14,61 +23,116 @@ $includeAssignments = $c.includeAssignments
 $includePersonsWithoutAssignments = $c.includePersonsWithoutAssignments
 $excludePersonsWithoutContractsInHelloID = $c.excludePersonsWithoutContractsInHelloID
 
-$Script:BaseUrl = "https://api.raet.com/iam/v1.0"
+$Script:BaseUrl = "https://api.raet.com"
+
+#region functions
+function Resolve-HTTPError {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory,
+            ValueFromPipeline
+        )]
+        [object]$ErrorObject
+    )
+    process {
+        $httpErrorObj = [PSCustomObject]@{
+            FullyQualifiedErrorId = $ErrorObject.FullyQualifiedErrorId
+            MyCommand             = $ErrorObject.InvocationInfo.MyCommand
+            RequestUri            = $ErrorObject.TargetObject.RequestUri
+            ScriptStackTrace      = $ErrorObject.ScriptStackTrace
+            ErrorMessage          = ''
+        }
+        if ($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') {
+            $httpErrorObj.ErrorMessage = $ErrorObject.ErrorDetails.Message
+        }
+        elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
+            $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+        }
+        Write-Output $httpErrorObj
+    }
+}
 
 function New-RaetSession {
     [CmdletBinding()]
     param (
-        [Alias("Param1")]
-        [parameter(Mandatory = $true)]
-        [string]
+        [Alias("Param1")] 
+        [parameter(Mandatory = $true)]  
+        [string]      
         $ClientId,
 
-        [Alias("Param2")]
-        [parameter(Mandatory = $true)]
+        [Alias("Param2")] 
+        [parameter(Mandatory = $true)]  
         [string]
         $ClientSecret,
 
-        [Alias("Param3")]
-        [parameter(Mandatory = $false)]
+        [Alias("Param3")] 
+        [parameter(Mandatory = $false)]  
         [string]
         $TenantId
     )
 
     #Check if the current token is still valid
-    if (Confirm-AccessTokenIsValid -eq $true) {
+    $accessTokenValid = Confirm-AccessTokenIsValid
+    if ($true -eq $accessTokenValid) {
         return
     }
 
-    $url = "https://api.raet.com/authentication/token"
-    $authorisationBody = @{
-        'grant_type'    = "client_credentials"
-        'client_id'     = $ClientId
-        'client_secret' = $ClientSecret
-    }
     try {
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-        $result = Invoke-WebRequest -Uri $url -Method Post -Body $authorisationBody -ContentType 'application/x-www-form-urlencoded' -Headers @{'Cache-Control' = "no-cache" } -Proxy:$Proxy -UseBasicParsing
-        $accessToken = $result.Content | ConvertFrom-Json
-        $Script:expirationTimeAccessToken = (Get-Date).AddSeconds($accessToken.expires_in)
+        # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+
+        $authorisationBody = @{
+            'grant_type'    = "client_credentials"
+            'client_id'     = $ClientId
+            'client_secret' = $ClientSecret
+        }        
+        $splatAccessTokenParams = @{
+            Uri             = "$($BaseUrl)/authentication/token"
+            Headers         = @{'Cache-Control' = "no-cache" }
+            Method          = 'POST'
+            ContentType     = "application/x-www-form-urlencoded"
+            Body            = $authorisationBody
+            UseBasicParsing = $true
+        }
+
+        Write-Verbose "Creating Access Token at uri '$($splatAccessTokenParams.Uri)'"
+
+        $result = Invoke-RestMethod @splatAccessTokenParams
+        if ($null -eq $result.access_token) {
+            throw $result
+        }
+
+        $Script:expirationTimeAccessToken = (Get-Date).AddSeconds($result.expires_in)
 
         $Script:AuthenticationHeaders = @{
             'X-Client-Id'      = $ClientId
-            'Authorization'    = "Bearer $($accessToken.access_token)"
+            'Authorization'    = "Bearer $($result.access_token)"
             'X-Raet-Tenant-Id' = $TenantId
         }
+
+        Write-Verbose "Successfully created Access Token at uri '$($splatAccessTokenParams.Uri)'"
     }
     catch {
-        if ($_.Exception.Response.StatusCode -eq "Forbidden") {
-            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
+        $ex = $PSItem
+        if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $errorObject = Resolve-HTTPError -Error $ex
+    
+            $verboseErrorMessage = $errorObject.ErrorMessage
+    
+            $auditErrorMessage = $errorObject.ErrorMessage
         }
-        elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
-            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'"
+    
+        # If error message empty, fall back on $ex.Exception.Message
+        if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+            $verboseErrorMessage = $ex.Exception.Message
         }
-        else {
-            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'"
+        if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+            $auditErrorMessage = $ex.Exception.Message
         }
-        throw $errorMessage
+
+        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+        throw "Error creating Access Token at uri ''$($splatAccessTokenParams.Uri)'. Please check credentials. Error Message: $auditErrorMessage"
     }
 }
 
@@ -88,60 +152,126 @@ function Invoke-RaetWebRequestList {
         [string]
         $Url
     )
-    try {
-        [System.Collections.ArrayList]$ReturnValue = @()
-        $counter = 0
-        do {
-            if ($counter -gt 0) {
-                $SkipTakeUrl = $resultSubset.nextLink.Substring($resultSubset.nextLink.IndexOf("?"))
-            }
-            $counter++
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+    
+    # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+
+    [System.Collections.ArrayList]$ReturnValue = @()
+    $counter = 0
+    $triesCounter = 0
+    do {
+        try {
             $accessTokenValid = Confirm-AccessTokenIsValid
-            if ($accessTokenValid -ne $true) {
+            if ($true -ne $accessTokenValid) {
                 New-RaetSession -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId
             }
-            $result = Invoke-WebRequest -Uri $Url$SkipTakeUrl -Method GET -ContentType "application/json" -Headers $Script:AuthenticationHeaders -UseBasicParsing
-            $resultSubset = (ConvertFrom-Json  $result.Content)
-            $ReturnValue.AddRange($resultSubset.value)
-        } until([string]::IsNullOrEmpty($resultSubset.nextLink))
-    }
-    catch {
-        if ($_.Exception.Response.StatusCode -eq "Forbidden") {
-            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.Exception.Message)'"
+
+            $retry = $false
+
+            if ($counter -gt 0 -and $null -ne $result.nextLink) {
+                $SkipTakeUrl = $result.nextLink.Substring($result.nextLink.IndexOf("?"))
+            }
+
+            $counter++
+
+            $splatGetDataParams = @{
+                Uri             = "$Url$SkipTakeUrl"
+                Headers         = $Script:AuthenticationHeaders
+                Method          = 'GET'
+                ContentType     = "application/json"
+                UseBasicParsing = $true
+            }
+    
+            Write-Verbose "Querying data from '$($splatGetDataParams.Uri)'"
+
+            $result = Invoke-RestMethod @splatGetDataParams
+            $ReturnValue.AddRange($result.value)
+
+            # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
+            Start-Sleep -Milliseconds 600
         }
-        elseif (![string]::IsNullOrEmpty($_.ErrorDetails.Message)) {
-            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_.ErrorDetails.Message)'"
+        catch {
+            $ex = $PSItem
+           
+            if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+                $errorObject = Resolve-HTTPError -Error $ex
+        
+                $verboseErrorMessage = $errorObject.ErrorMessage
+        
+                $auditErrorMessage = $errorObject.ErrorMessage
+            }
+        
+            # If error message empty, fall back on $ex.Exception.Message
+            if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+                $verboseErrorMessage = $ex.Exception.Message
+            }
+            if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+                $auditErrorMessage = $ex.Exception.Message
+            }
+    
+            Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+            $maxTries = 3
+            if ($auditErrorMessage -Like "*`"errorCode`": `"Too Many Requests`"*" -and $triesCounter -lt $maxTries) {
+                $triesCounter++
+                $retry = $true
+                $delay = 100
+                Write-Warning "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $auditErrorMessage. Trying again in '$delay' milliseconds for a maximum of '$maxTries' tries."
+                Start-Sleep -Milliseconds $delay
+            }
+            else {
+                $retry = $false
+                throw "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $auditErrorMessage"
+            }
         }
-        else {
-            $errorMessage = "Something went wrong $($_.ScriptStackTrace). Error message: '$($_)'"
-        }
-        throw $errorMessage
-    }
+    }while (-NOT[string]::IsNullOrEmpty($result.nextLink) -or $retry -eq $true)
+
+    Write-Verbose "Successfully queried data from '$($Url)'. Result count: $($ReturnValue.Count)"
+
     return $ReturnValue
 }
+#endregion functions
 
-Write-Information "Starting person import"
+Write-Information "Starting person import. Base URL: $BaseUrl"
 
 # Query persons
 try {
     Write-Verbose "Querying persons"
 
-    $persons = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/employees"
+    $persons = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/employees"
     # Make sure persons are unique
     $persons = $persons | Sort-Object id -Unique
 
     Write-Information "Successfully queried persons. Result: $($persons.Count)"
 }
 catch {
-    throw "Could not retrieve persons. Error: $($_.Exception.Message)"
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Error querying persons. Error Message: $auditErrorMessage"
 }
 
 # Query jobProfiles
 try {
     Write-Verbose "Querying jobProfiles"
     
-    $jobProfiles = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/jobProfiles"
+    $jobProfiles = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/jobProfiles"
     # Filter for only active jobProfiles
     $ActiveCompareDate = Get-Date
     $jobProfiles = $jobProfiles | Where-Object { $_.isActive -ne $false -and
@@ -153,14 +283,33 @@ try {
     Write-Information "Successfully queried jobProfiles. Result: $($jobProfiles.Count)"
 }
 catch {
-    throw "Could not retrieve jobProfiles. Error: $($_.Exception.Message)"
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Error querying jobProfiles. Error Message: $auditErrorMessage"
 }
 
 # Query costAllocations
 try {
     Write-Verbose "Querying costAllocations"
     
-    $costAllocations = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/costAllocations"
+    $costAllocations = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/costAllocations"
     # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
     $costAllocations | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
     $costAllocations | Foreach-Object {
@@ -172,7 +321,26 @@ try {
     Write-Information "Successfully queried costAllocations. Result: $($costAllocations.Count)"
 }
 catch {
-    throw "Could not retrieve costAllocations. Error: $($_.Exception.Message)"
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Error querying costAllocations. Error Message: $auditErrorMessage"
 }
 
 # Query assignments
@@ -180,7 +348,7 @@ if ($true -eq $includeAssignments) {
     try {
         Write-Verbose "Querying assignments"
         
-        $assignments = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/assignments"
+        $assignments = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/assignments"
 
         # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
         $assignments | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
@@ -193,11 +361,35 @@ if ($true -eq $includeAssignments) {
         Write-Information "Successfully queried assignments. Result: $($assignments.Count)"
     }
     catch {
-        throw "Could not retrieve assignments. Error: $($_.Exception.Message)"
+        $ex = $PSItem
+        if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $errorObject = Resolve-HTTPError -Error $ex
+    
+            $verboseErrorMessage = $errorObject.ErrorMessage
+    
+            $auditErrorMessage = $errorObject.ErrorMessage
+        }
+    
+        # If error message empty, fall back on $ex.Exception.Message
+        if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+            $verboseErrorMessage = $ex.Exception.Message
+        }
+        if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+            $auditErrorMessage = $ex.Exception.Message
+        }
+    
+        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+    
+        throw "Error querying assignments. Error Message: $auditErrorMessage"
     }
 }
 
 try {
+    Write-Verbose 'Enhancing and exporting person objects to HelloID'
+
+    # Set counter to keep track of actual exported person objects
+    $exportedPersons = 0
+
     # Enhance the persons model
     $persons | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
     $persons | Add-Member -MemberType NoteProperty -Name "DisplayName" -Value $null -Force
@@ -362,23 +554,46 @@ try {
         # Add Contracts to person
         if ($contractsList.Count -ge 1) {
             $_.Contracts = $contractsList
-        } elseif($true -eq $excludePersonsWithoutContractsInHelloID){
+        }
+        elseif ($true -eq $excludePersonsWithoutContractsInHelloID) {
             ### Be very careful when logging in a loop, only use this when the amount is below 100
             ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
             # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Person has no contract data"
             return
-        }
+        }     
 
         # Sanitize and export the json
         $person = $_ | ConvertTo-Json -Depth 10
         $person = $person.Replace("._", "__")
 
         Write-Output $person
+
+        # Updated counter to keep track of actual exported person objects
+        $exportedPersons++        
     }
 
+    Write-Information "Succesfully enhanced and exported person objects to HelloID. Result count: $($exportedPersons)"
     Write-Information "Person import completed"
 }
 catch {
-    Write-Error "Error at line: $($_.InvocationInfo.PositionMessage)"
-    throw "Error: $_"
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Could not enhance and export person objects to HelloID. Error Message: $auditErrorMessage"
 }
