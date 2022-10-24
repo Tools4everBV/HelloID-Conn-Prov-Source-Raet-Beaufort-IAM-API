@@ -212,7 +212,7 @@ function Invoke-RaetWebRequestList {
             Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
 
             $maxTries = 3
-            if ($auditErrorMessage -Like "*`"errorCode`": `"Too Many Requests`"*" -and $triesCounter -lt $maxTries) {
+            if ( ($auditErrorMessage -Like "*`"Too Many Requests`"*" -or $auditErrorMessage -Like "*`"Connection timed out`"*") -and $triesCounter -lt $maxTries ) {
                 $triesCounter++
                 $retry = $true
                 $delay = 100
