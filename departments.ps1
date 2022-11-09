@@ -208,11 +208,11 @@ function Invoke-RaetWebRequestList {
     
             Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
 
-            $maxTries = 3
+            $maxTries = 10
             if ( ($auditErrorMessage -Like "*Too Many Requests*" -or $auditErrorMessage -Like "*Connection timed out*") -and $triesCounter -lt $maxTries ) {
                 $triesCounter++
                 $retry = $true
-                $delay = 100
+                $delay = 600 # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
                 Write-Warning "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $auditErrorMessage. Trying again in '$delay' milliseconds for a maximum of '$maxTries' tries."
                 Start-Sleep -Milliseconds $delay
             }
