@@ -3,7 +3,7 @@
         {
             "name": "Contact.Business.Email",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.BusinessEmailAddress !== 'undefined' && source.BusinessEmailAddress) {\r\n        returnValue = source.BusinessEmailAddress.address;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.BusinessEmailAddress !== 'undefined' && source.BusinessEmailAddress) {\r\n        returnValue = source.BusinessEmailAddress.address;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -11,7 +11,7 @@
         {
             "name": "Contact.Business.Phone.Fixed",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.BusinessPhoneNumber !== 'undefined' && source.BusinessPhoneNumber) {\r\n        returnValue = source.BusinessPhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.BusinessPhoneNumber !== 'undefined' && source.BusinessPhoneNumber) {\r\n        returnValue = source.BusinessPhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -19,7 +19,15 @@
         {
             "name": "Contact.Business.Phone.Mobile",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof source.MobilePhoneNumber !== 'undefined' && source.MobilePhoneNumber) {\r\n        returnValue = source.MobilePhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.MobilePhoneNumber !== 'undefined' && source.MobilePhoneNumber) {\r\n        returnValue = source.MobilePhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Contact.Personal.Email",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.PrivateEmailAddress !== 'undefined' && source.PrivateEmailAddress) {\r\n        returnValue = source.PrivateEmailAddress.address;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -43,7 +51,7 @@
         {
             "name": "Name.Convention",
             "mode": "complex",
-            "value": "function getValue() {\r\n    if(source.nameAssembleOrder == \"P\") {\r\n        return \"P\";\r\n    }\r\n    if(source.nameAssembleOrder == \"E\") {\r\n        return \"B\";\r\n    }\r\n    if(source.nameAssembleOrder == \"B\") {\r\n        return \"PB\";\r\n    }\r\n    if(source.nameAssembleOrder == \"C\" || source.nameAssembleOrder == \"D\") {\r\n        return \"BP\";\r\n    }\r\n}\r\n \r\ngetValue();",
+            "value": "function getValue() {\r\n    let returnValue = '';\r\n\r\n    switch (source.nameAssembleOrder) {\r\n        case \"P\": {\r\n            returnValue = \"P\";\r\n            break;\r\n        }\r\n        case \"E\": {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n        case \"B\": {\r\n            returnValue = \"PB\";\r\n            break;\r\n        }\r\n        case \"C\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        case \"D\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        default: {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n \r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -109,7 +117,7 @@
         {
             "name": "CostCenter.Code",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -117,7 +125,7 @@
         {
             "name": "CostCenter.ExternalId",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -125,7 +133,7 @@
         {
             "name": "CostCenter.Name",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = '';\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof sourceContract.assignment_costAllocation !== 'undefined' && sourceContract.assignment_costAllocation) {\r\n        returnValue = sourceContract.assignment_costAllocation.costCenterName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -141,7 +149,7 @@
         {
             "name": "Department.ExternalId",
             "mode": "field",
-            "value": "assignment_organizationUnitCode",
+            "value": "assignment_organizationUnit",
             "validation": {
                 "required": false
             }
@@ -167,7 +175,7 @@
             "mode": "field",
             "value": "assignment_id",
             "validation": {
-                "required": false
+                "required": true
             }
         },
         {
@@ -206,6 +214,22 @@
             "name": "Title.Name",
             "mode": "field",
             "value": "assignment_jobProfile.fullName",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Type.Code",
+            "mode": "field",
+            "value": "employment_employmentType",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Type.Description",
+            "mode": "field",
+            "value": "employment_employmentTypeName",
             "validation": {
                 "required": false
             }
