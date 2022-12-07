@@ -552,15 +552,23 @@ try {
         }
 
         # Add Contracts to person
-        if ($contractsList.Count -ge 1) {
-            $_.Contracts = $contractsList
+        if ($null -ne $contractsList) {
+            # This example can be used by the consultant if you want to filter out persons with an empty array as contract
+            # *** Please consult with the Tools4ever consultant before enabling this code. ***
+            if ($contractsList.Count -eq 0 -and $true -eq $excludePersonsWithoutContractsInHelloID) {
+                # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Contracts is an empty array"
+                return
+            }
+            else {
+                $_.Contracts = $contractsList
+            }
         }
         elseif ($true -eq $excludePersonsWithoutContractsInHelloID) {
             ### Be very careful when logging in a loop, only use this when the amount is below 100
             ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
             # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Person has no contract data"
             return
-        }     
+        }
 
         # Sanitize and export the json
         $person = $_ | ConvertTo-Json -Depth 10
@@ -593,7 +601,7 @@ catch {
         $auditErrorMessage = $ex.Exception.Message
     }
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"
 
     throw "Could not enhance and export person objects to HelloID. Error Message: $auditErrorMessage"
 }
