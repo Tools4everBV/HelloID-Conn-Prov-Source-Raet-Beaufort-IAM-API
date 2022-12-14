@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Departments
 #
-# Version: 1.1.1
+# Version: 2.0.0
 #####################################################
 $c = $configuration | ConvertFrom-Json
 
@@ -20,7 +20,9 @@ $clientId = $c.clientId
 $clientSecret = $c.clientSecret
 $tenantId = $c.tenantId
 
-$Script:BaseUrl = "https://api.raet.com"
+
+$Script:AuthenticationUrl = "https://connect.visma.com/connect/token"
+$Script:BaseUrl = "https://api.youforce.com"
 
 #region functions
 function Resolve-HTTPError {
@@ -82,9 +84,10 @@ function New-RaetSession {
             'grant_type'    = "client_credentials"
             'client_id'     = $ClientId
             'client_secret' = $ClientSecret
+            'tenant_id'     = $TenantId
         }        
         $splatAccessTokenParams = @{
-            Uri             = "$($BaseUrl)/authentication/token"
+            Uri             = $AuthenticationUrl
             Headers         = @{'Cache-Control' = "no-cache" }
             Method          = 'POST'
             ContentType     = "application/x-www-form-urlencoded"
@@ -102,14 +105,17 @@ function New-RaetSession {
         $Script:expirationTimeAccessToken = (Get-Date).AddSeconds($result.expires_in)
 
         $Script:AuthenticationHeaders = @{
-            'X-Client-Id'      = $ClientId
-            'Authorization'    = "Bearer $($result.access_token)"
-            'X-Raet-Tenant-Id' = $TenantId
+            'Authorization' = "Bearer $($result.access_token)"
+            'Accept'        = "application/json"
         }
 
         Write-Verbose "Successfully created Access Token at uri '$($splatAccessTokenParams.Uri)'"
     }
     catch {
+        # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+        $verboseErrorMessage = $null
+        $auditErrorMessage = $null
+
         $ex = $PSItem
         if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
             $errorObject = Resolve-HTTPError -Error $ex
@@ -168,6 +174,9 @@ function Invoke-RaetWebRequestList {
             if ($counter -gt 0 -and $null -ne $result.nextLink) {
                 $SkipTakeUrl = $result.nextLink.Substring($result.nextLink.IndexOf("?"))
             }
+            else {
+                $SkipTakeUrl = "?take=1000"
+            }
 
             $counter++
 
@@ -182,14 +191,23 @@ function Invoke-RaetWebRequestList {
             Write-Verbose "Querying data from '$($splatGetDataParams.Uri)'"
 
             $result = Invoke-RestMethod @splatGetDataParams
-            $ReturnValue.AddRange($result.value)
+            # Check both the keys "values" and "value", since Extensions endpoint returns the data in "values" instead of "value"
+            if ($result.values.Count -ne 0) {
+                $ReturnValue.AddRange($result.values)
+            }
+            else {
+                $ReturnValue.AddRange($result.value)
+            }
 
             # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
             Start-Sleep -Milliseconds 600
         }
         catch {
+            # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+            $verboseErrorMessage = $null
+            $auditErrorMessage = $null
+
             $ex = $PSItem
-           
             if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
                 $errorObject = Resolve-HTTPError -Error $ex
         
@@ -208,7 +226,7 @@ function Invoke-RaetWebRequestList {
     
             Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
 
-            $maxTries = 10
+            $maxTries = 3
             if ( ($auditErrorMessage -Like "*Too Many Requests*" -or $auditErrorMessage -Like "*Connection timed out*") -and $triesCounter -lt $maxTries ) {
                 $triesCounter++
                 $retry = $true
@@ -240,6 +258,10 @@ try {
     Write-Information "Successfully queried organizationUnits. Result: $($organizationUnits.Count)"
 }
 catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+
     $ex = $PSItem
     if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObject = Resolve-HTTPError -Error $ex
@@ -273,6 +295,10 @@ try {
     Write-Information "Successfully queried roleAssignments. Result: $($roleAssignments.Count)"
 }
 catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+
     $ex = $PSItem
     if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObject = Resolve-HTTPError -Error $ex
@@ -347,6 +373,10 @@ try {
     Write-Information "Department import completed"
 }
 catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+
     $ex = $PSItem
     if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObject = Resolve-HTTPError -Error $ex

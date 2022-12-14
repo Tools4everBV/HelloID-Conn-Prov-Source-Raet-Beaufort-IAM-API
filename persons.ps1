@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Persons
 #
-# Version: 1.1.1
+# Version: 2.0.0
 #####################################################
 $c = $configuration | ConvertFrom-Json
 
@@ -23,7 +23,8 @@ $includeAssignments = $c.includeAssignments
 $includePersonsWithoutAssignments = $c.includePersonsWithoutAssignments
 $excludePersonsWithoutContractsInHelloID = $c.excludePersonsWithoutContractsInHelloID
 
-$Script:BaseUrl = "https://api.raet.com"
+$Script:AuthenticationUrl = "https://connect.visma.com/connect/token"
+$Script:BaseUrl = "https://api.youforce.com"
 
 #region functions
 function Resolve-HTTPError {
@@ -85,9 +86,10 @@ function New-RaetSession {
             'grant_type'    = "client_credentials"
             'client_id'     = $ClientId
             'client_secret' = $ClientSecret
+            'tenant_id'     = $TenantId
         }        
         $splatAccessTokenParams = @{
-            Uri             = "$($BaseUrl)/authentication/token"
+            Uri             = $AuthenticationUrl
             Headers         = @{'Cache-Control' = "no-cache" }
             Method          = 'POST'
             ContentType     = "application/x-www-form-urlencoded"
@@ -105,14 +107,17 @@ function New-RaetSession {
         $Script:expirationTimeAccessToken = (Get-Date).AddSeconds($result.expires_in)
 
         $Script:AuthenticationHeaders = @{
-            'X-Client-Id'      = $ClientId
-            'Authorization'    = "Bearer $($result.access_token)"
-            'X-Raet-Tenant-Id' = $TenantId
+            'Authorization' = "Bearer $($result.access_token)"
+            'Accept'        = "application/json"
         }
 
         Write-Verbose "Successfully created Access Token at uri '$($splatAccessTokenParams.Uri)'"
     }
     catch {
+        # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+        $verboseErrorMessage = $null
+        $auditErrorMessage = $null
+
         $ex = $PSItem
         if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
             $errorObject = Resolve-HTTPError -Error $ex
@@ -171,6 +176,9 @@ function Invoke-RaetWebRequestList {
             if ($counter -gt 0 -and $null -ne $result.nextLink) {
                 $SkipTakeUrl = $result.nextLink.Substring($result.nextLink.IndexOf("?"))
             }
+            else {
+                $SkipTakeUrl = "?take=1000"
+            }
 
             $counter++
 
@@ -185,14 +193,23 @@ function Invoke-RaetWebRequestList {
             Write-Verbose "Querying data from '$($splatGetDataParams.Uri)'"
 
             $result = Invoke-RestMethod @splatGetDataParams
-            $ReturnValue.AddRange($result.value)
+            # Check both the keys "values" and "value", since Extensions endpoint returns the data in "values" instead of "value"
+            if ($result.values.Count -ne 0) {
+                $ReturnValue.AddRange($result.values)
+            }
+            else {
+                $ReturnValue.AddRange($result.value)
+            }
 
-            # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
-            Start-Sleep -Milliseconds 600
+            # Wait for 0,601 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
+            Start-Sleep -Milliseconds 601
         }
         catch {
+            # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+            $verboseErrorMessage = $null
+            $auditErrorMessage = $null
+
             $ex = $PSItem
-           
             if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
                 $errorObject = Resolve-HTTPError -Error $ex
         
@@ -211,11 +228,11 @@ function Invoke-RaetWebRequestList {
     
             Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
 
-            $maxTries = 10
+            $maxTries = 3
             if ( ($auditErrorMessage -Like "*Too Many Requests*" -or $auditErrorMessage -Like "*Connection timed out*") -and $triesCounter -lt $maxTries ) {
                 $triesCounter++
                 $retry = $true
-                $delay = 600 # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
+                $delay = 601 # Wait for 0,601 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
                 Write-Warning "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $auditErrorMessage. Trying again in '$delay' milliseconds for a maximum of '$maxTries' tries."
                 Start-Sleep -Milliseconds $delay
             }
@@ -238,13 +255,18 @@ Write-Information "Starting person import. Base URL: $BaseUrl"
 try {
     Write-Verbose "Querying persons"
 
-    $persons = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/employees"
+    $personsList = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/persons"
+
     # Make sure persons are unique
-    $persons = $persons | Sort-Object id -Unique
+    $persons = $personsList | Sort-Object id -Unique
 
     Write-Information "Successfully queried persons. Result: $($persons.Count)"
 }
 catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+
     $ex = $PSItem
     if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObject = Resolve-HTTPError -Error $ex
@@ -267,22 +289,194 @@ catch {
     throw "Error querying persons. Error Message: $auditErrorMessage"
 }
 
+# Query person extensions
+try {
+    Write-Verbose "Querying person extensions"
+
+    $personExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUrl/extensions/v1.0/iam/persons"
+
+    # Group by personCode
+    $personExtensionsGrouped = $personExtensionsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
+
+    Write-Information "Successfully queried person extensions. Result: $($personExtensionsList.Count)"
+}
+catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Error querying person extensions. Error Message: $auditErrorMessage"
+}
+
+# Query employments
+try {
+    Write-Verbose "Querying employments"
+
+    $employmentsList = Invoke-RaetWebRequestList -Url "$Script:BaseUrl/iam/v1.0/employments"
+
+    # Group by personCode
+    $employmentsGrouped = $employmentsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
+
+    Write-Information "Successfully queried employments. Result: $($employmentsList.Count)"
+}
+catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+    
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Error querying employments. Error Message: $auditErrorMessage"
+}
+
+# Query employment extensions
+try {
+    Write-Verbose "Querying employment extensions"
+
+    $employmentExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUrl/extensions/v1.0/iam/employments"
+
+    # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
+    $employmentExtensionsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+    $employmentExtensionsList | Foreach-Object {
+        $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+    }
+
+    # Group by ExternalId
+    $employmentExtensionsGrouped = $employmentExtensionsList | Group-Object ExternalId -CaseSensitive -AsHashTable -AsString
+
+    Write-Information "Successfully queried employment extensions. Result: $($employmentExtensionsList.Count)"
+}
+catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+    
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Error querying employment extensions. Error Message: $auditErrorMessage"
+}
+
+# Query assignments
+if ($true -eq $includeAssignments) {
+    try {
+        Write-Verbose "Querying assignments"
+        
+        $assignmentsList = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/assignments"
+
+        # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
+        $assignmentsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+        $assignmentsList | Foreach-Object {
+            $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+        }
+
+        # Group by ExternalId
+        $assignmentsGrouped = $assignmentsList | Group-Object ExternalId -AsHashTable
+
+        Write-Information "Successfully queried assignments. Result: $($assignmentsList.Count)"
+    }
+    catch {
+        # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+        $verboseErrorMessage = $null
+        $auditErrorMessage = $null
+        
+        $ex = $PSItem
+        if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $errorObject = Resolve-HTTPError -Error $ex
+    
+            $verboseErrorMessage = $errorObject.ErrorMessage
+    
+            $auditErrorMessage = $errorObject.ErrorMessage
+        }
+    
+        # If error message empty, fall back on $ex.Exception.Message
+        if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+            $verboseErrorMessage = $ex.Exception.Message
+        }
+        if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+            $auditErrorMessage = $ex.Exception.Message
+        }
+    
+        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+    
+        throw "Error querying assignments. Error Message: $auditErrorMessage"
+    }
+}
+
 # Query jobProfiles
 try {
     Write-Verbose "Querying jobProfiles"
     
-    $jobProfiles = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/jobProfiles"
+    $jobProfilesList = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/jobProfiles"
+
     # Filter for only active jobProfiles
     $ActiveCompareDate = Get-Date
-    $jobProfiles = $jobProfiles | Where-Object { $_.isActive -ne $false -and
+    $jobProfilesList = $jobProfilesList | Where-Object { $_.isActive -ne $false -and
         (([Datetime]::ParseExact($_.validFrom, 'yyyy-MM-dd', $null)) -le $ActiveCompareDate) -and
         (([Datetime]::ParseExact($_.validUntil, 'yyyy-MM-dd', $null)) -ge $ActiveCompareDate) }
-    # Group by id
-    $jobProfilesGrouped = $jobProfiles | Group-Object Id -AsHashTable
 
-    Write-Information "Successfully queried jobProfiles. Result: $($jobProfiles.Count)"
+    # Group by id
+    $jobProfilesGrouped = $jobProfilesList | Group-Object Id -AsHashTable
+
+    Write-Information "Successfully queried jobProfiles. Result: $($jobProfilesList.Count)"
 }
 catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+    
     $ex = $PSItem
     if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObject = Resolve-HTTPError -Error $ex
@@ -309,18 +503,24 @@ catch {
 try {
     Write-Verbose "Querying costAllocations"
     
-    $costAllocations = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/costAllocations"
+    $costAllocationsList = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/costAllocations"
+
     # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
-    $costAllocations | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
-    $costAllocations | Foreach-Object {
+    $costAllocationsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+    $costAllocationsList | Foreach-Object {
         $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
     }
+    
     # Group by ExternalId
-    $costAllocationsGrouped = $costAllocations | Group-Object ExternalId -AsHashTable
+    $costAllocationsGrouped = $costAllocationsList | Group-Object ExternalId -AsHashTable
 
-    Write-Information "Successfully queried costAllocations. Result: $($costAllocations.Count)"
+    Write-Information "Successfully queried costAllocations. Result: $($costAllocationsList.Count)"
 }
 catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+    
     $ex = $PSItem
     if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObject = Resolve-HTTPError -Error $ex
@@ -343,46 +543,45 @@ catch {
     throw "Error querying costAllocations. Error Message: $auditErrorMessage"
 }
 
-# Query assignments
-if ($true -eq $includeAssignments) {
-    try {
-        Write-Verbose "Querying assignments"
-        
-        $assignments = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/assignments"
+#region Custom - Query organizationUnits to enhance contracts with department information
+# Query organizationUnits
+try {
+    Write-Verbose "Querying organizationUnits"
 
-        # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
-        $assignments | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
-        $assignments | Foreach-Object {
-            $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
-        }
-        # Group by ExternalId
-        $assignmentsGrouped = $assignments | Group-Object ExternalId -AsHashTable
+    $organizationUnits = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/organizationUnits"
 
-        Write-Information "Successfully queried assignments. Result: $($assignments.Count)"
-    }
-    catch {
-        $ex = $PSItem
-        if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $errorObject = Resolve-HTTPError -Error $ex
-    
-            $verboseErrorMessage = $errorObject.ErrorMessage
-    
-            $auditErrorMessage = $errorObject.ErrorMessage
-        }
-    
-        # If error message empty, fall back on $ex.Exception.Message
-        if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-            $verboseErrorMessage = $ex.Exception.Message
-        }
-        if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-            $auditErrorMessage = $ex.Exception.Message
-        }
-    
-        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
-    
-        throw "Error querying assignments. Error Message: $auditErrorMessage"
-    }
+    # Group by ExternalId
+    $organizationUnitsGrouped = $organizationUnits | Group-Object id -AsHashTable -AsString
+
+    Write-Information "Successfully queried organizationUnits. Result: $($organizationUnits.Count)"
 }
+catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+    
+    $ex = $PSItem
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+
+    throw "Error querying organizationUnits. Error Message: $auditErrorMessage"
+}
+#endregion Custom - Query organizationUnits to enhance contracts with department information
 
 try {
     Write-Verbose 'Enhancing and exporting person objects to HelloID'
@@ -443,34 +642,67 @@ try {
         }
 
         # Transform extensions and add to the person
-        if ($null -ne $_.extensions) {
-            foreach ($extension in $_.extensions) {
+        $personExtensions = $personExtensionsGrouped[$_.personCode]
+        if ($null -ne $personExtensions) {
+            foreach ($personExtension in $personExtensions) {
                 # Add a property for each extension
-                $_ | Add-Member -Name $extension.key -MemberType NoteProperty -Value $extension.value -Force
+                $_ | Add-Member -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $personExtension.value -Force
             }
-
-            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
-            # Remove extensions, since the data is transformed into seperate properties
-            $_.PSObject.Properties.Remove('extensions')
         }
 
         # Create contracts object
+        # Get employments for person, linking key is company personCode
+        $personEmployments = $employmentsGrouped[$_.personCode]
+
         $contractsList = [System.Collections.ArrayList]::new()
-        if ($null -ne $_.employments) {
-            foreach ($employment in $_.employments) {
-                # Enhance employment with jobProfile for for extra information, such as: fullName
+        if ($null -ne $personEmployments) {
+            foreach ($employment in $personEmployments) {
+                # Enhance employment with jobProfile for extra information, such as: fullName
                 $jobProfile = $jobProfilesGrouped["$($employment.jobProfile)"]
                 if ($null -ne $jobProfile) {
                     # In the case multiple jobProfiles are found with the same ID, we always select the first one in the array
                     $employment | Add-Member -MemberType NoteProperty -Name "jobProfile" -Value $jobProfile[0] -Force
                 }
 
-                # Enhance employment with costAllocation for for extra information, such as: fullName
+                #region Custom - Enhance employment with department information
+                # Enhance employment with organizationalUnit for extra information, such as: parentOU
+                $department = $organizationUnitsGrouped["$($employment.organizationUnit)"]
+                if ($null -ne $department) {
+                    # In the case multiple organizationalUnits are found with the same ID, we always select the first one in the array
+                    $employment | Add-Member -MemberType NoteProperty -Name "organizationUnit" -Value $department[0] -Force
+                }
+
+                # Enhance employment with upper OU for extra information
+                $upperOU = $organizationUnitsGrouped["$($employment.organizationUnit.parentOrgUnit)"]
+                if ($null -ne $upperOU) {
+                    # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
+                    $employment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpper" -Value $upperOU[0] -Force
+                }
+
+                # Enhance employment with ipper upper OU for extra information
+                $upperUpperOU = $organizationUnitsGrouped["$($employment.organizationUnitUpper.parentOrgUnit)"]
+                if ($null -ne $upperUpperOU) {
+                    # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
+                    $employment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpperUpper" -Value $upperUpperOU[0] -Force
+                }
+                #endregion Custom - Enhance employment with department information
+
+                # Enhance employment with costAllocation for extra information, such as: fullName
                 # Get costAllocation for employment, linking key is PersonCode + "_" + employmentCode
                 $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $employment.employmentCode)]
                 if ($null -ne $costAllocation) {
                     # In the case multiple costAllocations are found with the same ID, we always select the first one in the array
                     $employment | Add-Member -MemberType NoteProperty -Name "costAllocation" -Value $costAllocation[0] -Force
+                }
+
+                # Enhance employment with extension for extra information
+                # Get extension for employment, linking key is PersonCode + "_" + employmentCode
+                $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                if ($null -ne $employmentExtensions) {
+                    foreach ($employmentExtension in $employmentExtensions) {
+                        # Add a property for each extension
+                        $employment | Add-Member -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $employmentExtension.value -Force
+                    }
                 }
 
                 if ($false -eq $includeAssignments) {
@@ -493,14 +725,37 @@ try {
                     # Add assignment and employment data to contracts
                     if ($null -ne $assignments) {
                         foreach ($assignment in $assignments) {
-                            # Enhance assignment with jobProfile for for extra information, such as: fullName
+                            # Enhance assignment with jobProfile for extra information, such as: fullName
                             $jobProfile = $jobProfilesGrouped["$($assignment.jobProfile)"]
                             if ($null -ne $jobProfile) {
                                 # In the case multiple jobProfiles are found with the same ID, we always select the first one in the array
                                 $assignment | Add-Member -MemberType NoteProperty -Name "jobProfile" -Value $jobProfile[0] -Force
                             }
 
-                            # Enhance assignment with costAllocation for for extra information, such as: fullName
+                            #region Custom - Enhance assignment with department information
+                            # Enhance assignment with organizationalUnit for extra information, such as: parentOU
+                            $department = $organizationUnitsGrouped["$($assignment.organizationUnit)"]
+                            if ($null -ne $department) {
+                                # In the case multiple organizationalUnits are found with the same ID, we always select the first one in the array
+                                $assignment | Add-Member -MemberType NoteProperty -Name "organizationUnit" -Value $department[0] -Force
+                            }
+
+                            # Enhance assignment with upper OU for extra information
+                            $upperOU = $organizationUnitsGrouped["$($assignment.organizationUnit.parentOrgUnit)"]
+                            if ($null -ne $upperOU) {
+                                # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
+                                $assignment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpper" -Value $upperOU[0] -Force
+                            }
+
+                            # Enhance assignment with upper upper OU for extra information
+                            $upperUpperOU = $organizationUnitsGrouped["$($assignment.organizationUnitUpper.parentOrgUnit)"]
+                            if ($null -ne $upperUpperOU) {
+                                # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
+                                $assignment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpperUpper" -Value $upperUpperOU[0] -Force
+                            }
+                            #endregion Custom - Enhance assignment with department information
+
+                            # Enhance assignment with costAllocation for extra information, such as: fullName
                             # Get costAllocation for assignment, linking key is PersonCode + "_" + assignmentCode
                             $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $assignment.employmentCode)]
                             if ($null -ne $costAllocation) {
@@ -584,6 +839,10 @@ try {
     Write-Information "Person import completed"
 }
 catch {
+    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
+    $verboseErrorMessage = $null
+    $auditErrorMessage = $null
+    
     $ex = $PSItem
     if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObject = Resolve-HTTPError -Error $ex
@@ -601,7 +860,7 @@ catch {
         $auditErrorMessage = $ex.Exception.Message
     }
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
 
     throw "Could not enhance and export person objects to HelloID. Error Message: $auditErrorMessage"
 }
