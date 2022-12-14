@@ -34,7 +34,7 @@
   {
     "key": "includeAssignments",
     "type": "checkbox",
-    "defaultValue": false,
+    "defaultValue": true,
     "templateOptions": {
       "label": "Include assignments",
       "required": false
