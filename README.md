@@ -11,6 +11,7 @@
 ## Versioning
 | Version | Description | Date |
 | - | - | - |
+| 2.0.0   | Updated to use new endpoints and support extensions | 2022/12/14  |
 | 1.1.1   | Updated to handle too many request errors | 2022/09/19  |
 | 1.1.0   | Updated perforance and logging | 2022/05/24  |
 | 1.0.0   | Initial release | 2020/08/18  |
@@ -26,6 +27,8 @@
       - [HR Beaufort](#hr-beaufort)
 - [Raet IAM API documentation](#raet-iam-api-documentation)
 - [Getting started](#getting-started)
+  - [App within Visma](#app-within-visma)
+  - [Scope Configuration within Visma](#scope-configuration-within-visma)
   - [Connection settings](#connection-settings)
   - [Prerequisites](#prerequisites)
   - [Remarks](#remarks)
@@ -41,13 +44,18 @@
 This connector retrieves HR data from the RAET IAM API. Please be aware that there are several versions. This version connects to the latest API release and is intended for Beaufort Customers. The code structure is mainly the same as the HR core Business variant. Despite the differences below.
 
 ## Endpoints implemented
+[IAM Domain model](https://community.visma.com/t5/Kennisbank-Youforce-API/IAM-Domain-model-amp-field-mapping/ta-p/428102)
+- /iam/v1.0/persons (Persons script)
+- /iam/v1.0/employments (Persons script)
+- /iam/v1.0/assignments (Persons script, optional)
+- /iam/v1.0/jobProfiles (Persons script)
+- /iam/v1.0/costAllocations (Persons script)
+- /iam/v1.0/organizationUnits (Departments script)
+- /iam/v1.0/roleAssignments (Departments script)
 
-- /employees  (person)
-- /jobProfiles (person)
-- /assignments (person)
-- /costAllocations (person)
-- /organizationUnits (departments)
-- /roleAssignments (departments)
+[Extensions](https://community.visma.com/t5/Kennisbank-Youforce-API/Eigen-rubrieken-met-de-Extensions-API/ta-p/530789)
+- /extensions/v1.0/iam/persons (Persons script)
+- /extensions/v1.0/iam/employments (Persons script)
 
 ## Raet IAM API status monitoring
 https://developers.youforce.com/api-status
@@ -72,14 +80,31 @@ Please see the following website about the Raet IAM API documentation. Also note
 ---
 
 ## Getting started
+### App within Visma
+First an App will have to be created in the [Visma Developer portal](https://oauth.developers.visma.com). This App can then be linked to specific scopes and to a client, which will only be available after the invitation has been accepted. 
+Please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059).
+
+### Scope Configuration within Visma 
+Before the connector can be used to retrieve employee information, the following scopes need to be enabled and assigned to the connector. If you need help setting the scopes up, please consult your Visma contact.
+
+- Youforce-IAM:Get_Basic
+- Youforce-Extensions:files:Get_Basic
+
+> Note: When using any of the target connectors, additional scopes are required as well.
+>   - For [HelloID-Conn-Prov-Target-RAET-IAM-API](https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-RAET-IAM-API), used to write back the identity field, which is used for SSO, in Youforce, the following scopes are required:
+>     - Youforce-IAM:Update_Identity 
+>   - For [HelloID-Conn-Prov-Target-Raet-DPIA100-FileAPI](https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-Raet-DPIA100-FileAPI), used to write back the data to Beaufprt, e.g. the business email address, the following scopes are required:
+>     - youforce-fileapi:files:list 
+>     - youforce-fileapi:files:upload
+
 ### Connection settings
 The following settings are required to run the source import.
 
 | Setting                                       | Description                                                               | Mandatory   |
 | --------------------------------------------- | ------------------------------------------------------------------------- | ----------- |
-| Client ID                                     | The Client ID to connect to the Raet IAM API.                             | Yes         |
-| Client Secret                                 | The Client Secret to connect to the Raet IAM API.                         | Yes         |
-| Tenant ID                                     | The Tenant ID to specify to which tenant to connect to the Raet IAM API.  | Yes         |
+| Client ID                                     | The Client ID to connect to the Raet IAM API (created when registering the App in in the Visma Developer portal).                             | Yes         |
+| Client Secret                                 | The Client Secret to connect to the Raet IAM API (created when registering the App in in the Visma Developer portal).                         | Yes         |
+| Tenant ID                                     | The Tenant ID to specify to which tenant to connect to the Raet IAM API(available in the Visma Developer portal after the invitation code has been accepted).  | Yes         |
 | Include assignments                           | Include assignments yes/no.                                               | No          |
 | Include persons without assignments           | Include persons without assignments yes/no.                               | No          |
 | Exclude persons without contracts in HelloID  | Exclude persons without contracts in HelloID yes/no.                      | No          |
@@ -104,7 +129,7 @@ When including assigments and excluding persons without contracts in HelloID (de
 This mapping only uses fields available on assignments and does not expect fields which would be available on the assignments.
 If a person has no assignments, this will result in an import error. To solve this (without changing the mapping) select the option to "**Exclude persons without contracts in HelloID**".
 
-When including assigments and not excluding persons without contracts in HelloID (default setting):
+When including assigments and not excluding persons without contracts in HelloID:
 - mapping.assignments.includePersonsWithoutAssignments.json
 This mapping uses fields available on assignments, if these are not available for a person it uses the fields available on the employments.
 If a person has no assignments & employments, this will result in an import error. To solve this (without changing the mapping) select the option to "**Exclude persons without contracts in HelloID**".
