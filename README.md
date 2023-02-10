@@ -97,7 +97,7 @@ Before the connector can be used to retrieve employee information, the following
 > Note: When using any of the target connectors, additional scopes are required as well.
 >   - For [HelloID-Conn-Prov-Target-RAET-IAM-API](https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-RAET-IAM-API), used to write back the identity field, which is used for SSO, in Youforce, the following scopes are required:
 >     - Youforce-IAM:Update_Identity 
->   - For [HelloID-Conn-Prov-Target-Raet-DPIA100-FileAPI](https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-Raet-DPIA100-FileAPI), used to write back the data to Beaufprt, e.g. the business email address, the following scopes are required:
+>   - For [HelloID-Conn-Prov-Target-Raet-DPIA100-FileAPI](https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-Raet-DPIA100-FileAPI), used to write back the data to Beaufort, e.g. the business email address, the following scopes are required:
 >     - youforce-fileapi:files:list 
 >     - youforce-fileapi:files:upload
 
