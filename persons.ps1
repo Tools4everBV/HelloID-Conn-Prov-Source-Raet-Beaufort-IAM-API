@@ -461,12 +461,6 @@ try {
     
     $jobProfilesList = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/jobProfiles"
 
-    # Filter for only active jobProfiles
-    $ActiveCompareDate = Get-Date
-    $jobProfilesList = $jobProfilesList | Where-Object { $_.isActive -ne $false -and
-        (([Datetime]::ParseExact($_.validFrom, 'yyyy-MM-dd', $null)) -le $ActiveCompareDate) -and
-        (([Datetime]::ParseExact($_.validUntil, 'yyyy-MM-dd', $null)) -ge $ActiveCompareDate) }
-
     # Group by id
     $jobProfilesGrouped = $jobProfilesList | Group-Object Id -AsHashTable
 
