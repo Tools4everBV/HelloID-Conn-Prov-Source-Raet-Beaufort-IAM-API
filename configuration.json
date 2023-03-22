@@ -59,6 +59,15 @@
     }
   },
   {
+    "key": "excludeExtensions",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Exclude extensions if no permissions have been assigned",
+      "required": false
+    }
+  },
+  {
     "key": "isDebug",
     "type": "checkbox",
     "defaultValue": false,
