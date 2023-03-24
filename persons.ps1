@@ -22,7 +22,7 @@ $tenantId = $c.tenantId
 $includeAssignments = $c.includeAssignments
 $includePersonsWithoutAssignments = $c.includePersonsWithoutAssignments
 $excludePersonsWithoutContractsInHelloID = $c.excludePersonsWithoutContractsInHelloID
-$excludeExtensions = $c.excludeExtensions
+$includeExtensions = $c.includeExtensions
 
 $Script:AuthenticationUrl = "https://connect.visma.com/connect/token"
 $Script:BaseUrl = "https://api.youforce.com"
@@ -292,7 +292,7 @@ catch {
 
 # Query person extensions
 try {
-    if ($false -eq $excludeExtensions) {
+    if ($true -eq $includeExtensions) {
         Write-Verbose "Querying person extensions"
 
         $personExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUrl/extensions/v1.0/iam/persons"
@@ -302,7 +302,7 @@ try {
 
         Write-Information "Successfully queried person extensions. Result: $($personExtensionsList.Count)"
     } else { 
-        Write-Information "Ignored querying person extensions because the configuration toggle exclude extensions is: $($excludeExtensions)"
+        Write-Information "Ignored querying person extensions because the configuration toggle to include extensions is: $($includeExtensions)"
     }
 }
 catch {
@@ -372,7 +372,7 @@ catch {
 
 # Query employment extensions
 try {
-    if ($false -eq $excludeExtensions) {
+    if ($true -eq $includeExtensions) {
     Write-Verbose "Querying employment extensions"
 
     $employmentExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUrl/extensions/v1.0/iam/employments"
@@ -388,7 +388,7 @@ try {
 
     Write-Information "Successfully queried employment extensions. Result: $($employmentExtensionsList.Count)"
     } else { 
-	    Write-Information "Ignored querying employmens extensions because the configuration toggle exclude extensions is: $($excludeExtensions)"
+	    Write-Information "Ignored querying employmens extensions because the configuration toggle to include extensions is: $($includeExtensions)"
 	}
 }
 catch {
@@ -645,7 +645,7 @@ try {
         }
 
         # Transform extensions and add to the person
-        if ($false -eq $excludeExtensions) {
+        if ($true -eq $includeExtensions) {
             $personExtensions = $personExtensionsGrouped[$_.personCode]
             if ($null -ne $personExtensions) {
                 foreach ($personExtension in $personExtensions) {
@@ -702,7 +702,7 @@ try {
 
                 # Enhance employment with extension for extra information
                 # Get extension for employment, linking key is PersonCode + "_" + employmentCode
-                if ($false -eq $excludeExtensions) {
+                if ($true -eq $includeExtensions) {
                     $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
                     if ($null -ne $employmentExtensions) {
                         foreach ($employmentExtension in $employmentExtensions) {

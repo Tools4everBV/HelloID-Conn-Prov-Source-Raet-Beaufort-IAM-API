@@ -59,11 +59,11 @@
     }
   },
   {
-    "key": "excludeExtensions",
+    "key": "includeExtensions",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Exclude extensions if no permissions have been assigned",
+      "label": "Include extensions of persons and employments",
       "required": false
     }
   },
