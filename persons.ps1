@@ -22,6 +22,7 @@ $tenantId = $c.tenantId
 $includeAssignments = $c.includeAssignments
 $includePersonsWithoutAssignments = $c.includePersonsWithoutAssignments
 $excludePersonsWithoutContractsInHelloID = $c.excludePersonsWithoutContractsInHelloID
+$includeExtensions = $c.includeExtensions
 
 $Script:AuthenticationUrl = "https://connect.visma.com/connect/token"
 $Script:BaseUrl = "https://api.youforce.com"
@@ -291,14 +292,18 @@ catch {
 
 # Query person extensions
 try {
-    Write-Verbose "Querying person extensions"
+    if ($true -eq $includeExtensions) {
+        Write-Verbose "Querying person extensions"
 
-    $personExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUrl/extensions/v1.0/iam/persons"
+        $personExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUrl/extensions/v1.0/iam/persons"
 
-    # Group by personCode
-    $personExtensionsGrouped = $personExtensionsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
+        # Group by personCode
+        $personExtensionsGrouped = $personExtensionsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
 
-    Write-Information "Successfully queried person extensions. Result: $($personExtensionsList.Count)"
+        Write-Information "Successfully queried person extensions. Result: $($personExtensionsList.Count)"
+    } else { 
+        Write-Information "Ignored querying person extensions because the configuration toggle to include extensions is: $($includeExtensions)"
+    }
 }
 catch {
     # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
@@ -367,6 +372,7 @@ catch {
 
 # Query employment extensions
 try {
+    if ($true -eq $includeExtensions) {
     Write-Verbose "Querying employment extensions"
 
     $employmentExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUrl/extensions/v1.0/iam/employments"
@@ -381,6 +387,9 @@ try {
     $employmentExtensionsGrouped = $employmentExtensionsList | Group-Object ExternalId -CaseSensitive -AsHashTable -AsString
 
     Write-Information "Successfully queried employment extensions. Result: $($employmentExtensionsList.Count)"
+    } else { 
+	    Write-Information "Ignored querying employmens extensions because the configuration toggle to include extensions is: $($includeExtensions)"
+	}
 }
 catch {
     # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
@@ -636,11 +645,13 @@ try {
         }
 
         # Transform extensions and add to the person
-        $personExtensions = $personExtensionsGrouped[$_.personCode]
-        if ($null -ne $personExtensions) {
-            foreach ($personExtension in $personExtensions) {
-                # Add a property for each extension
-                $_ | Add-Member -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $personExtension.value -Force
+        if ($true -eq $includeExtensions) {
+            $personExtensions = $personExtensionsGrouped[$_.personCode]
+            if ($null -ne $personExtensions) {
+                foreach ($personExtension in $personExtensions) {
+                    # Add a property for each extension
+                    $_ | Add-Member -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $personExtension.value -Force
+                }
             }
         }
 
@@ -691,11 +702,13 @@ try {
 
                 # Enhance employment with extension for extra information
                 # Get extension for employment, linking key is PersonCode + "_" + employmentCode
-                $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
-                if ($null -ne $employmentExtensions) {
-                    foreach ($employmentExtension in $employmentExtensions) {
-                        # Add a property for each extension
-                        $employment | Add-Member -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $employmentExtension.value -Force
+                if ($true -eq $includeExtensions) {
+                    $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                    if ($null -ne $employmentExtensions) {
+                        foreach ($employmentExtension in $employmentExtensions) {
+                            # Add a property for each extension
+                            $employment | Add-Member -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $employmentExtension.value -Force
+                        }
                     }
                 }
 

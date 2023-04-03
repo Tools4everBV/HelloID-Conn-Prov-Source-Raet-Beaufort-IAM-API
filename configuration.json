@@ -59,6 +59,15 @@
     }
   },
   {
+    "key": "includeExtensions",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Include extensions of persons and employments",
+      "required": false
+    }
+  },
+  {
     "key": "isDebug",
     "type": "checkbox",
     "defaultValue": false,
