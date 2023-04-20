@@ -193,10 +193,18 @@ function Invoke-RaetWebRequestList {
             $result = Invoke-RestMethod @splatGetDataParams
             # Check both the keys "values" and "value", since Extensions endpoint returns the data in "values" instead of "value"
             if ($result.values.Count -ne 0) {
-                $ReturnValue.AddRange($result.values)
+                $resultObjects = $result.values
             }
             else {
-                $ReturnValue.AddRange($result.value)
+                $resultObjects = $result.value
+            }
+
+            # Check if resultObjects are an array if so, add the entire range, otherwise add the single object
+            if ($resultObjects -is [array]) {
+                [void]$ReturnValue.AddRange($resultObjects)
+            }
+            else {
+                [void]$ReturnValue.Add($resultObjects)
             }
 
             # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
