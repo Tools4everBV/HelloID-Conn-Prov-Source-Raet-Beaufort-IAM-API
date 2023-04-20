@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Departments
 #
-# Version: 2.0.0
+# Version: 2.1.1
 #####################################################
 $c = $configuration | ConvertFrom-Json
 
@@ -20,9 +20,8 @@ $clientId = $c.clientId
 $clientSecret = $c.clientSecret
 $tenantId = $c.tenantId
 
-
-$Script:AuthenticationUrl = "https://connect.visma.com/connect/token"
-$Script:BaseUrl = "https://api.youforce.com"
+$Script:AuthenticationUri = "https://connect.visma.com/connect/token"
+$Script:BaseUri = "https://api.youforce.com"
 
 #region functions
 function Resolve-HTTPError {
@@ -48,6 +47,40 @@ function Resolve-HTTPError {
             $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
         }
         Write-Output $httpErrorObj
+    }
+}
+
+function Get-ErrorMessage {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory,
+            ValueFromPipeline
+        )]
+        [object]$ErrorObject
+    )
+    process {
+        $errorMessage = [PSCustomObject]@{
+            VerboseErrorMessage = $null
+            AuditErrorMessage   = $null
+        }
+
+        if ( $($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $httpErrorObject = Resolve-HTTPError -Error $ErrorObject
+
+            $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
+
+            $errorMessage.AuditErrorMessage = $httpErrorObject.ErrorMessage
+        }
+
+        # If error message empty, fall back on $ex.Exception.Message
+        if ([String]::IsNullOrEmpty($errorMessage.VerboseErrorMessage)) {
+            $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
+        }
+        if ([String]::IsNullOrEmpty($errorMessage.AuditErrorMessage)) {
+            $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
+        }
+
+        Write-Output $errorMessage
     }
 }
 
@@ -87,7 +120,7 @@ function New-RaetSession {
             'tenant_id'     = $TenantId
         }        
         $splatAccessTokenParams = @{
-            Uri             = $AuthenticationUrl
+            Uri             = $Script:AuthenticationUri
             Headers         = @{'Cache-Control' = "no-cache" }
             Method          = 'POST'
             ContentType     = "application/x-www-form-urlencoded"
@@ -97,7 +130,7 @@ function New-RaetSession {
 
         Write-Verbose "Creating Access Token at uri '$($splatAccessTokenParams.Uri)'"
 
-        $result = Invoke-RestMethod @splatAccessTokenParams
+        $result = Invoke-RestMethod @splatAccessTokenParams -Verbose:$false
         if ($null -eq $result.access_token) {
             throw $result
         }
@@ -112,30 +145,16 @@ function New-RaetSession {
         Write-Verbose "Successfully created Access Token at uri '$($splatAccessTokenParams.Uri)'"
     }
     catch {
-        # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
-        $verboseErrorMessage = $null
-        $auditErrorMessage = $null
-
         $ex = $PSItem
-        if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $errorObject = Resolve-HTTPError -Error $ex
-    
-            $verboseErrorMessage = $errorObject.ErrorMessage
-    
-            $auditErrorMessage = $errorObject.ErrorMessage
-        }
-    
-        # If error message empty, fall back on $ex.Exception.Message
-        if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-            $verboseErrorMessage = $ex.Exception.Message
-        }
-        if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-            $auditErrorMessage = $ex.Exception.Message
-        }
+        $errorMessage = Get-ErrorMessage -ErrorObject $ex
 
-        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
+        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($($errorMessage.VerboseErrorMessage))"
 
-        throw "Error creating Access Token at uri ''$($splatAccessTokenParams.Uri)'. Please check credentials. Error Message: $auditErrorMessage"
+        $auditLogs.Add([PSCustomObject]@{
+                # Action  = "" # Optional
+                Message = "Error creating Access Token at uri ''$($splatAccessTokenParams.Uri)'. Please check credentials. Error Message: $($errorMessage.AuditErrorMessage)"
+                IsError = $true
+            })     
     }
 }
 
@@ -207,44 +226,26 @@ function Invoke-RaetWebRequestList {
                 [void]$ReturnValue.Add($resultObjects)
             }
 
-            # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
-            Start-Sleep -Milliseconds 600
+            # Wait for 0,601 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
+            Start-Sleep -Milliseconds 601
         }
-        catch {
-            # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
-            $verboseErrorMessage = $null
-            $auditErrorMessage = $null
-
+        catch {           
             $ex = $PSItem
-            if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-                $errorObject = Resolve-HTTPError -Error $ex
-        
-                $verboseErrorMessage = $errorObject.ErrorMessage
-        
-                $auditErrorMessage = $errorObject.ErrorMessage
-            }
-        
-            # If error message empty, fall back on $ex.Exception.Message
-            if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-                $verboseErrorMessage = $ex.Exception.Message
-            }
-            if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-                $auditErrorMessage = $ex.Exception.Message
-            }
+            $errorMessage = Get-ErrorMessage -ErrorObject $ex
     
-            Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
-
+            Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
+            
             $maxTries = 3
-            if ( ($auditErrorMessage -Like "*Too Many Requests*" -or $auditErrorMessage -Like "*Connection timed out*") -and $triesCounter -lt $maxTries ) {
+            if ( ($($errorMessage.AuditErrorMessage) -Like "*Too Many Requests*" -or $($errorMessage.AuditErrorMessage) -Like "*Connection timed out*") -and $triesCounter -lt $maxTries ) {
                 $triesCounter++
                 $retry = $true
-                $delay = 600 # Wait for 0,6 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
-                Write-Warning "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $auditErrorMessage. Trying again in '$delay' milliseconds for a maximum of '$maxTries' tries."
+                $delay = 601 # Wait for 0,601 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
+                Write-Warning "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $($errorMessage.AuditErrorMessage). Trying again in '$delay' milliseconds for a maximum of '$maxTries' tries."
                 Start-Sleep -Milliseconds $delay
             }
             else {
                 $retry = $false
-                throw "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $auditErrorMessage"
+                throw "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $($errorMessage.AuditErrorMessage)"
             }
         }
     }while (-NOT[string]::IsNullOrEmpty($result.nextLink) -or $retry -eq $true)
@@ -261,72 +262,36 @@ Write-Information "Starting department import. Base URL: $BaseUrl"
 try {
     Write-Verbose "Querying organizationUnits"
 
-    $organizationUnits = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/organizationUnits"
+    $organizationUnits = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/organizationUnits"
 
     Write-Information "Successfully queried organizationUnits. Result: $($organizationUnits.Count)"
 }
 catch {
-    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
-    $verboseErrorMessage = $null
-    $auditErrorMessage = $null
-
     $ex = $PSItem
-    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObject = Resolve-HTTPError -Error $ex
+    $errorMessage = Get-ErrorMessage -ErrorObject $ex
 
-        $verboseErrorMessage = $errorObject.ErrorMessage
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"      
 
-        $auditErrorMessage = $errorObject.ErrorMessage
-    }
-
-    # If error message empty, fall back on $ex.Exception.Message
-    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-        $verboseErrorMessage = $ex.Exception.Message
-    }
-    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-        $auditErrorMessage = $ex.Exception.Message
-    }
-
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
-
-    throw "Error querying organizationUnits. Error Message: $auditErrorMessage"
+    throw "Error querying organizationUnits. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 
 # Query roleAssignments
 try {
     Write-Verbose "Querying roleAssignments"
 
-    $roleAssignments = Invoke-RaetWebRequestList -Url "$BaseUrl/iam/v1.0/roleAssignments"
+    $roleAssignments = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/roleAssignments"
     # Sort Role assignments on personCode to make sure we always have the same manager with the same data
     $roleAssignments = $roleAssignments | Sort-Object -Property { [int]$_.personCode }
 
     Write-Information "Successfully queried roleAssignments. Result: $($roleAssignments.Count)"
 }
 catch {
-    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
-    $verboseErrorMessage = $null
-    $auditErrorMessage = $null
-
     $ex = $PSItem
-    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObject = Resolve-HTTPError -Error $ex
+    $errorMessage = Get-ErrorMessage -ErrorObject $ex
 
-        $verboseErrorMessage = $errorObject.ErrorMessage
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"     
 
-        $auditErrorMessage = $errorObject.ErrorMessage
-    }
-
-    # If error message empty, fall back on $ex.Exception.Message
-    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-        $verboseErrorMessage = $ex.Exception.Message
-    }
-    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-        $auditErrorMessage = $ex.Exception.Message
-    }
-
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
-
-    throw "Error querying roleAssignments. Error Message: $auditErrorMessage"
+    throw "Error querying roleAssignments. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 
 try {
@@ -377,32 +342,14 @@ try {
         $exportedDepartments++
     }
 
-    Write-Information "Succesfully enhanced and exported department objects to HelloID. Result count: $($exportedDepartments)"
+    Write-Information "Successfully enhanced and exported department objects to HelloID. Result count: $($exportedDepartments)"
     Write-Information "Department import completed"
 }
 catch {
-    # Clear verboseErrorMessage and auditErrorMessage to make sure it isn't filled with a previouw error message
-    $verboseErrorMessage = $null
-    $auditErrorMessage = $null
-
     $ex = $PSItem
-    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObject = Resolve-HTTPError -Error $ex
+    $errorMessage = Get-ErrorMessage -ErrorObject $ex
 
-        $verboseErrorMessage = $errorObject.ErrorMessage
+    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"       
 
-        $auditErrorMessage = $errorObject.ErrorMessage
-    }
-
-    # If error message empty, fall back on $ex.Exception.Message
-    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-        $verboseErrorMessage = $ex.Exception.Message
-    }
-    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-        $auditErrorMessage = $ex.Exception.Message
-    }
-
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"        
-
-    throw "Could not enhance and export department objects to HelloID. Error Message: $auditErrorMessage"
+    throw "Could not enhance and export department objects to HelloID. Error Message: $($errorMessage.AuditErrorMessage)"
 }
