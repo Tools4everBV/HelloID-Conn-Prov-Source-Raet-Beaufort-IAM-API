@@ -15,6 +15,7 @@
 ## Versioning
 | Version | Description | Date |
 | - | - | - |
+| 2.1.0   | Updated to output person object flat (where necessary) | 2023/04/20  |
 | 2.0.0   | Updated to use new endpoints and support extensions | 2022/12/14  |
 | 1.1.1   | Updated to handle too many request errors | 2022/09/19  |
 | 1.1.0   | Updated perforance and logging | 2022/05/24  |
