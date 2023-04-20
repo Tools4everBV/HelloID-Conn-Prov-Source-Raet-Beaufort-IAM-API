@@ -2,40 +2,40 @@
     "personMappings": [
         {
             "name": "Contact.Business.Email",
-            "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.BusinessEmailAddress !== 'undefined' && source.BusinessEmailAddress) {\r\n        returnValue = source.BusinessEmailAddress.address;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "mode": "field",
+            "value": "BusinessEmailAddress_address",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "Contact.Business.Phone.Fixed",
-            "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.BusinessPhoneNumber !== 'undefined' && source.BusinessPhoneNumber) {\r\n        returnValue = source.BusinessPhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "mode": "field",
+            "value": "BusinessPhoneNumber_number",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "Contact.Business.Phone.Mobile",
-            "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.MobilePhoneNumber !== 'undefined' && source.MobilePhoneNumber) {\r\n        returnValue = source.MobilePhoneNumber.number;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "mode": "field",
+            "value": "MobilePhoneNumber_number",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "Contact.Personal.Email",
-            "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof source.PrivateEmailAddress !== 'undefined' && source.PrivateEmailAddress) {\r\n        returnValue = source.PrivateEmailAddress.address;\r\n    };\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "mode": "field",
+            "value": "PrivateEmailAddress_address",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "Details.Gender",
-            "mode": "field",
-            "value": "gender",
+            "mode": "complex",
+            "value": "function getValue() {\r\n    let returnValue = '';\r\n\r\n    switch (source.gender) {\r\n        case \"Female\": {\r\n            returnValue = \"V\";\r\n            break;\r\n        }\r\n        case \"Male\": {\r\n            returnValue = \"M\";\r\n            break;\r\n        }\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -51,7 +51,7 @@
         {
             "name": "Name.Convention",
             "mode": "complex",
-            "value": "function getValue() {\r\n    let returnValue = '';\r\n\r\n    switch (source.nameAssembleOrder) {\r\n        case \"P\": {\r\n            returnValue = \"P\";\r\n            break;\r\n        }\r\n        case \"E\": {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n        case \"B\": {\r\n            returnValue = \"PB\";\r\n            break;\r\n        }\r\n        case \"C\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        case \"D\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        default: {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n \r\ngetValue();",
+            "value": "function getValue() {\r\n    let returnValue = '';\r\n\r\n    switch (source.nameAssembleOrder) {\r\n        case \"P\": {\r\n            returnValue = \"P\";\r\n            break;\r\n        }\r\n        case \"E\": {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n        case \"B\": {\r\n            returnValue = \"PB\";\r\n            break;\r\n        }\r\n        case \"C\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        case \"D\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        default: {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -116,24 +116,24 @@
     "contractMappings": [
         {
             "name": "CostCenter.Code",
-            "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "mode": "field",
+            "value": "employment_costAllocation_costCenterCode",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "CostCenter.ExternalId",
-            "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterCode;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "mode": "field",
+            "value": "employment_costAllocation_costCenterCode",
             "validation": {
                 "required": false
             }
         },
         {
             "name": "CostCenter.Name",
-            "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    if (typeof sourceContract.employment_costAllocation !== 'undefined' && sourceContract.employment_costAllocation) {\r\n        returnValue = sourceContract.employment_costAllocation.costCenterName;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "mode": "field",
+            "value": "employment_costAllocation_costCenterName",
             "validation": {
                 "required": false
             }
@@ -141,7 +141,7 @@
         {
             "name": "Department.DisplayName",
             "mode": "field",
-            "value": "employment_organizationUnitName",
+            "value": "employment_organizationUnit_fullName",
             "validation": {
                 "required": false
             }
@@ -149,7 +149,15 @@
         {
             "name": "Department.ExternalId",
             "mode": "field",
-            "value": "employment_organizationUnit",
+            "value": "employment_organizationUnit_id",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Details.Fte",
+            "mode": "field",
+            "value": "employment_workingAmount.parttimePercentage",
             "validation": {
                 "required": false
             }
@@ -163,9 +171,41 @@
             }
         },
         {
-            "name": "EndDate",
+            "name": "Details.Percentage",
             "mode": "field",
-            "value": "function getValue(){\r\n    returnValue = sourceContract.employment_dischargeDate;\r\n\r\n    if(sourceContract.employment_dischargeDate == '9999-12-31'){\r\n        returnValue = null;\r\n    }\r\n    return returnValue;\r\n}\r\n\r\ngetValue()",
+            "value": "employment_workingAmount.parttimePercentage",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Details.Sequence",
+            "mode": "field",
+            "value": "employment_contractCode",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Employer.Code",
+            "mode": "field",
+            "value": "employment_payrollClientCode",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Employer.ExternalId",
+            "mode": "field",
+            "value": "employment_payrollClientCode",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "EndDate",
+            "mode": "complex",
+            "value": "function getValue(){\r\n    returnValue = sourceContract.employment_dischargeDate;\r\n\r\n    if(sourceContract.employment_dischargeDate == '9999-12-31'){\r\n        returnValue = null;\r\n    }\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -176,6 +216,14 @@
             "value": "employment_id",
             "validation": {
                 "required": true
+            }
+        },
+        {
+            "name": "Organization.Code",
+            "mode": "field",
+            "value": "employment_company",
+            "validation": {
+                "required": false
             }
         },
         {
@@ -203,9 +251,17 @@
             }
         },
         {
+            "name": "Title.Code",
+            "mode": "field",
+            "value": "employment_jobProfile_shortName",
+            "validation": {
+                "required": false
+            }
+        },
+        {
             "name": "Title.ExternalId",
             "mode": "field",
-            "value": "employment_jobProfile.shortName",
+            "value": "employment_jobProfile_id",
             "validation": {
                 "required": false
             }
@@ -213,7 +269,7 @@
         {
             "name": "Title.Name",
             "mode": "field",
-            "value": "employment_jobProfile.fullName",
+            "value": "employment_jobProfile_fullName",
             "validation": {
                 "required": false
             }

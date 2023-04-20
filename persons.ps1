@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Persons
 #
-# Version: 2.0.0
+# Version: 2.1.0
 #####################################################
 $c = $configuration | ConvertFrom-Json
 
@@ -597,7 +597,7 @@ try {
     $persons | Add-Member -MemberType NoteProperty -Name "DisplayName" -Value $null -Force
     $persons | Add-Member -MemberType NoteProperty -Name "Contracts" -Value $null -Force
 
-    $persons | ForEach-Object {
+    $persons  | ForEach-Object {
         # Set required fields for HelloID
         $_.ExternalId = $_.personCode
         $_.DisplayName = "$($_.knownAs) $($_.lastNameAtBirth) ($($_.ExternalId))" 
@@ -606,13 +606,14 @@ try {
         if ($null -ne $_.emailAddresses) {
             foreach ($emailAddress in $_.emailAddresses) {
                 if (![string]::IsNullOrEmpty($emailAddress)) {
-                    # Add a property for each type of EmailAddress
-                    $_ | Add-Member -MemberType NoteProperty -Name "$($emailAddress.type)EmailAddress" -Value $emailAddress -Force
+                    foreach ($property in $emailAddress.PsObject.Properties) {
+                        # Add a property for each field in object
+                        $_ | Add-Member -MemberType NoteProperty -Name ("$($emailAddress.type)EmailAddress_" + $property.Name) -Value $property.Value -Force
+                    }
                 }
             }
 
             # Remove unneccesary fields from  object (to avoid unneccesary large objects)
-            # Remove customFieldGroup, since the data is transformed into seperate properties
             $_.PSObject.Properties.Remove('emailAddresses')
         }
 
@@ -620,13 +621,14 @@ try {
         if ($null -ne $_.phoneNumbers) {
             foreach ($phoneNumber in $_.phoneNumbers) {
                 if (![string]::IsNullOrEmpty($phoneNumber)) {
-                    # Add a property for each type of PhoneNumber
-                    $_ | Add-Member -MemberType NoteProperty -Name "$($phoneNumber.type)PhoneNumber" -Value $phoneNumber -Force
+                    foreach ($property in $phoneNumber.PsObject.Properties) {
+                        # Add a property for each field in object
+                        $_ | Add-Member -MemberType NoteProperty -Name ("$($phoneNumber.type)PhoneNumber_" + $property.Name) -Value $property.Value -Force
+                    }
                 }
             }
 
-            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
-            # Remove phoneNumbers, since the data is transformed into seperate properties
+            # Remove unneccesary fields from object (to avoid unneccesary large objects)
             $_.PSObject.Properties.Remove('phoneNumbers')
         }
 
@@ -634,26 +636,31 @@ try {
         if ($null -ne $_.addresses) {
             foreach ($address in $_.addresses) {
                 if (![string]::IsNullOrEmpty($address)) {
-                    # Add a property for each type of address
-                    $_ | Add-Member -MemberType NoteProperty -Name "$($address.type)Address" -Value $address -Force
+                    foreach ($property in $address.PsObject.Properties) {
+                        # Add a property for each field in object
+                        $_ | Add-Member -MemberType NoteProperty -Name ("$($address.type)Address_" + $property.Name) -Value $property.Value -Force
+                    }
                 }
             }
 
-            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
-            # Remove addresses, since the data is transformed into seperate properties
+            # Remove unneccesary fields from object (to avoid unneccesary large objects)
             $_.PSObject.Properties.Remove('addresses')
         }
 
         # Transform extensions and add to the person
         if ($true -eq $includeExtensions) {
-            $personExtensions = $personExtensionsGrouped[$_.personCode]
-            if ($null -ne $personExtensions) {
-                foreach ($personExtension in $personExtensions) {
-                    # Add a property for each extension
-                    $_ | Add-Member -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $personExtension.value -Force
+            if ($null -ne $personExtensionsGrouped) {
+                $personExtensions = $personExtensionsGrouped[$_.personCode]
+                if ($null -ne $personExtensions) {
+                    foreach ($personExtension in $personExtensions) {
+                        # Add a property for each field in object
+                        $_ | Add-Member -MemberType NoteProperty -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '')) -Value $personExtension.value -Force
+                    }
                 }
             }
         }
+        # Remove unneccesary fields from object (to avoid unneccesary large objects) - Extensions are available via a seperate endpoint
+        $_.PSObject.Properties.Remove('extensions')
 
         # Create contracts object
         # Get employments for person, linking key is company personCode
@@ -665,52 +672,91 @@ try {
                 # Enhance employment with jobProfile for extra information, such as: fullName
                 $jobProfile = $jobProfilesGrouped["$($employment.jobProfile)"]
                 if ($null -ne $jobProfile) {
-                    # In the case multiple jobProfiles are found with the same ID, we always select the first one in the array
-                    $employment | Add-Member -MemberType NoteProperty -Name "jobProfile" -Value $jobProfile[0] -Force
+                    # In case multiple are found with the same ID, we always select the first one in the array
+                    $jobProfile = $jobProfile | Select-Object -First 1
+
+                    if (![string]::IsNullOrEmpty($jobProfile)) {
+                        foreach ($property in $jobProfile.PsObject.Properties) {
+                            # Add a property for each field in object
+                            $employment | Add-Member -MemberType NoteProperty -Name ("jobProfile_" + $property.Name) -Value $property.Value -Force
+                        }
+                    }
                 }
 
-                #region Custom - Enhance employment with department information
                 # Enhance employment with organizationalUnit for extra information, such as: parentOU
                 $department = $organizationUnitsGrouped["$($employment.organizationUnit)"]
                 if ($null -ne $department) {
-                    # In the case multiple organizationalUnits are found with the same ID, we always select the first one in the array
-                    $employment | Add-Member -MemberType NoteProperty -Name "organizationUnit" -Value $department[0] -Force
+                    # In case multiple are found with the same ID, we always select the first one in the array
+                    $department = $department | Select-Object -First 1
+
+                    if (![string]::IsNullOrEmpty($department)) {
+                        foreach ($property in $department.PsObject.Properties) {
+                            # Add a property for each field in object
+                            $employment | Add-Member -MemberType NoteProperty -Name ("organizationUnit_" + $property.Name) -Value $property.Value -Force
+                        }
+                    }
                 }
 
+                #region Custom - Enhance assignment with upper department(s) information
                 # Enhance employment with upper OU for extra information
                 $upperOU = $organizationUnitsGrouped["$($employment.organizationUnit.parentOrgUnit)"]
                 if ($null -ne $upperOU) {
-                    # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
-                    $employment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpper" -Value $upperOU[0] -Force
+                    # In case multiple are found with the same ID, we always select the first one in the array
+                    $upperOU = $upperOU | Select-Object -First 1
+
+                    if (![string]::IsNullOrEmpty($upperOU)) {
+                        foreach ($property in $upperOU.PsObject.Properties) {
+                            # Add a property for each field in object
+                            $employment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpper_" + $property.Name) -Value $property.Value -Force
+                        }
+                    }
                 }
 
                 # Enhance employment with ipper upper OU for extra information
                 $upperUpperOU = $organizationUnitsGrouped["$($employment.organizationUnitUpper.parentOrgUnit)"]
                 if ($null -ne $upperUpperOU) {
-                    # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
-                    $employment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpperUpper" -Value $upperUpperOU[0] -Force
+                    # In case multiple are found with the same ID, we always select the first one in the array
+                    $upperUpperOU = $upperUpperOU | Select-Object -First 1
+
+                    if (![string]::IsNullOrEmpty($upperUpperOU)) {
+                        foreach ($property in $upperUpperOU.PsObject.Properties) {
+                            # Add a property for each field in object
+                            $employment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpperUpper_" + $property.Name) -Value $property.Value -Force
+                        }
+                    }
                 }
-                #endregion Custom - Enhance employment with department information
+                #endregion Custom - Enhance assignment with upper department(s) information
 
                 # Enhance employment with costAllocation for extra information, such as: fullName
                 # Get costAllocation for employment, linking key is PersonCode + "_" + employmentCode
                 $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $employment.employmentCode)]
                 if ($null -ne $costAllocation) {
-                    # In the case multiple costAllocations are found with the same ID, we always select the first one in the array
-                    $employment | Add-Member -MemberType NoteProperty -Name "costAllocation" -Value $costAllocation[0] -Force
+                    # In case multiple are found with the same ID, we always select the first one in the array
+                    $costAllocation = $costAllocation | Select-Object -First 1
+
+                    if (![string]::IsNullOrEmpty($costAllocation)) {
+                        foreach ($property in $costAllocation.PsObject.Properties) {
+                            # Add a property for each field in object
+                            $employment | Add-Member -MemberType NoteProperty -Name ("costAllocation_" + $property.Name) -Value $property.Value -Force
+                        }
+                    }
                 }
 
                 # Enhance employment with extension for extra information
                 # Get extension for employment, linking key is PersonCode + "_" + employmentCode
                 if ($true -eq $includeExtensions) {
-                    $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
-                    if ($null -ne $employmentExtensions) {
-                        foreach ($employmentExtension in $employmentExtensions) {
-                            # Add a property for each extension
-                            $employment | Add-Member -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '')) -MemberType NoteProperty -Value $employmentExtension.value -Force
+                    if ($null -ne $employmentExtensionsGrouped) {
+                        $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                        if ($null -ne $employmentExtensions) {
+                            foreach ($employmentExtension in $employmentExtensions) {
+                                # Add a property for each field in object
+                                $employment | Add-Member -MemberType NoteProperty -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '')) -Value $employmentExtension.value -Force
+                            }
                         }
                     }
                 }
+                # Remove unneccesary fields from object (to avoid unneccesary large objects) - Extensions are available via a seperate endpoint
+                $employment.PSObject.Properties.Remove('extensions')
 
                 if ($false -eq $includeAssignments) {
                     # Create Contract object(s) based on employments
@@ -735,39 +781,74 @@ try {
                             # Enhance assignment with jobProfile for extra information, such as: fullName
                             $jobProfile = $jobProfilesGrouped["$($assignment.jobProfile)"]
                             if ($null -ne $jobProfile) {
-                                # In the case multiple jobProfiles are found with the same ID, we always select the first one in the array
-                                $assignment | Add-Member -MemberType NoteProperty -Name "jobProfile" -Value $jobProfile[0] -Force
+                                # In case multiple are found with the same ID, we always select the first one in the array
+                                $jobProfile = $jobProfile | Select-Object -First 1
+
+                                if (![string]::IsNullOrEmpty($jobProfile)) {
+                                    foreach ($property in $jobProfile.PsObject.Properties) {
+                                        # Add a property for each field in object
+                                        $assignment | Add-Member -MemberType NoteProperty -Name ("jobProfile_" + $property.Name) -Value $property.Value -Force
+                                    }
+                                }
                             }
 
-                            #region Custom - Enhance assignment with department information
                             # Enhance assignment with organizationalUnit for extra information, such as: parentOU
                             $department = $organizationUnitsGrouped["$($assignment.organizationUnit)"]
                             if ($null -ne $department) {
-                                # In the case multiple organizationalUnits are found with the same ID, we always select the first one in the array
-                                $assignment | Add-Member -MemberType NoteProperty -Name "organizationUnit" -Value $department[0] -Force
+                                # In case multiple are found with the same ID, we always select the first one in the array
+                                $department = $department | Select-Object -First 1
+
+                                if (![string]::IsNullOrEmpty($department)) {
+                                    foreach ($property in $department.PsObject.Properties) {
+                                        # Add a property for each field in object
+                                        $assignment | Add-Member -MemberType NoteProperty -Name ("organizationUnit_" + $property.Name) -Value $property.Value -Force
+                                    }
+                                }
                             }
 
+                            #region Custom - Enhance assignment with upper department(s) information
                             # Enhance assignment with upper OU for extra information
                             $upperOU = $organizationUnitsGrouped["$($assignment.organizationUnit.parentOrgUnit)"]
                             if ($null -ne $upperOU) {
-                                # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
-                                $assignment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpper" -Value $upperOU[0] -Force
+                                # In case multiple are found with the same ID, we always select the first one in the array
+                                $upperOU = $upperOU | Select-Object -First 1
+
+                                if (![string]::IsNullOrEmpty($upperOU)) {
+                                    foreach ($property in $upperOU.PsObject.Properties) {
+                                        # Add a property for each field in object
+                                        $assignment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpper_" + $property.Name) -Value $property.Value -Force
+                                    }
+                                }
                             }
 
                             # Enhance assignment with upper upper OU for extra information
                             $upperUpperOU = $organizationUnitsGrouped["$($assignment.organizationUnitUpper.parentOrgUnit)"]
                             if ($null -ne $upperUpperOU) {
-                                # In the case multiple upper OUs are found with the same ID, we always select the first one in the array
-                                $assignment | Add-Member -MemberType NoteProperty -Name "organizationUnitUpperUpper" -Value $upperUpperOU[0] -Force
+                                # In case multiple are found with the same ID, we always select the first one in the array
+                                $upperUpperOU = $upperUpperOU | Select-Object -First 1
+
+                                if (![string]::IsNullOrEmpty($upperUpperOU)) {
+                                    foreach ($property in $upperUpperOU.PsObject.Properties) {
+                                        # Add a property for each field in object
+                                        $assignment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpperUpper_" + $property.Name) -Value $property.Value -Force
+                                    }
+                                }
                             }
-                            #endregion Custom - Enhance assignment with department information
+                            #endregion Custom - Enhance assignment with upper department(s) information
 
                             # Enhance assignment with costAllocation for extra information, such as: fullName
                             # Get costAllocation for assignment, linking key is PersonCode + "_" + assignmentCode
                             $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $assignment.employmentCode)]
                             if ($null -ne $costAllocation) {
-                                # In the case multiple costAllocations are found with the same ID, we always select the first one in the array
-                                $assignment | Add-Member -MemberType NoteProperty -Name "costAllocation" -Value $costAllocation[0] -Force
+                                # In case multiple are found with the same ID, we always select the first one in the array
+                                $costAllocation = $costAllocation | Select-Object -First 1
+
+                                if (![string]::IsNullOrEmpty($costAllocation)) {
+                                    foreach ($property in $costAllocation.PsObject.Properties) {
+                                        # Add a property for each field in object
+                                        $assignment | Add-Member -MemberType NoteProperty -Name ("costAllocation_" + $property.Name) -Value $property.Value -Force
+                                    }
+                                }
                             }
 
                             # Create custom assignment object to include prefix in properties
@@ -839,10 +920,10 @@ try {
         Write-Output $person
 
         # Updated counter to keep track of actual exported person objects
-        $exportedPersons++        
+        $exportedPersons++
     }
 
-    Write-Information "Succesfully enhanced and exported person objects to HelloID. Result count: $($exportedPersons)"
+    Write-Information "Successfully enhanced and exported person objects to HelloID. Result count: $($exportedPersons)"
     Write-Information "Person import completed"
 }
 catch {
