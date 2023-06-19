@@ -7,9 +7,9 @@
 | :warning: Warning |
 |:---------------------------|
 | The latest version of this connector requires **new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059).       |
-
+<br />
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/69046642/170068731-d6609cc7-2b27-416c-bbf4-df65e5063a36.png">
+  <img src="https://www.tools4ever.nl/connector-logos/vismaraet-logo.png" width="500">
 </p>
 
 ## Versioning
