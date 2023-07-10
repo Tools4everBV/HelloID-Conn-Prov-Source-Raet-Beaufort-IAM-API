@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Persons
 #
-# Version: 2.1.1
+# Version: 2.2.0
 #####################################################
 $c = $configuration | ConvertFrom-Json
 
@@ -270,7 +270,7 @@ try {
     $personsList = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/persons"
 
     # Make sure persons are unique
-    $persons = $personsList | Sort-Object id -Unique
+    $persons = $personsList | Where-Object { $_.personCode -ne $null } | Sort-Object id -Unique
 
     Write-Information "Successfully queried persons. Result: $($persons.Count)"
 }
@@ -523,7 +523,9 @@ try {
                 if ($null -ne $personExtensions) {
                     foreach ($personExtension in $personExtensions) {
                         # Add a property for each field in object
-                        $_ | Add-Member -MemberType NoteProperty -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '')) -Value $personExtension.value -Force
+                        foreach ($property in $personExtension.PsObject.Properties) {
+                            $_ | Add-Member -MemberType NoteProperty -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '') + "_" + $property.Name) -Value "$($property.value)" -Force
+                        }
                     }
                 }
             }
@@ -619,7 +621,9 @@ try {
                         if ($null -ne $employmentExtensions) {
                             foreach ($employmentExtension in $employmentExtensions) {
                                 # Add a property for each field in object
-                                $employment | Add-Member -MemberType NoteProperty -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '')) -Value $employmentExtension.value -Force
+                                foreach ($property in $employmentExtension.PsObject.Properties) {
+                                    $employment | Add-Member -MemberType NoteProperty -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '') + "_" + $property.Name) -Value "$($property.value)" -Force
+                                }
                             }
                         }
                     }
@@ -748,6 +752,8 @@ try {
                             }
         
                             [Void]$contractsList.Add($employmentObject)
+                        } else {
+                             Write-Warning "Excluding person from export: $($_.ExternalId). Reason: No assignments found for person"
                         }
                     }
                 }
