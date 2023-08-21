@@ -150,4 +150,4 @@ The queries can be changed by the customer itself to meet their requirements.
 > _If you need help, feel free to ask questions on our [forum](https://forum.helloid.com)_
 
 ## HelloID docs
-The official HelloID documentation can be found at: https://docs.helloid.com/
+The official HelloID documentation can be found at: https://docs.helloid.com/ 
