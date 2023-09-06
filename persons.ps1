@@ -570,7 +570,7 @@ try {
 
                 #region Custom - Enhance assignment with upper department(s) information
                 # Enhance employment with upper OU for extra information
-                $upperOU = $organizationUnitsGrouped["$($employment.organizationUnit.parentOrgUnit)"]
+                $upperOU = $organizationUnitsGrouped["$($employment.organizationUnit_parentOrgUnit)"]
                 if ($null -ne $upperOU) {
                     # In case multiple are found with the same ID, we always select the first one in the array
                     $upperOU = $upperOU | Select-Object -First 1
@@ -681,7 +681,7 @@ try {
 
                             #region Custom - Enhance assignment with upper department(s) information
                             # Enhance assignment with upper OU for extra information
-                            $upperOU = $organizationUnitsGrouped["$($assignment.organizationUnit.parentOrgUnit)"]
+                            $upperOU = $organizationUnitsGrouped["$($assignment.organizationUnit_parentOrgUnit)"]
                             if ($null -ne $upperOU) {
                                 # In case multiple are found with the same ID, we always select the first one in the array
                                 $upperOU = $upperOU | Select-Object -First 1
