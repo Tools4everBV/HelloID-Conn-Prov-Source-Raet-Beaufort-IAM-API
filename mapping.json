@@ -51,9 +51,9 @@
         {
             "name": "Name.Convention",
             "mode": "complex",
-            "value": "function getValue() {\r\n    let returnValue = '';\r\n\r\n    switch (source.nameAssembleOrder) {\r\n        case \"P\": {\r\n            returnValue = \"P\";\r\n            break;\r\n        }\r\n        case \"E\": {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n        case \"B\": {\r\n            returnValue = \"PB\";\r\n            break;\r\n        }\r\n        case \"C\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        case \"D\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        default: {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue() {\r\n    let returnValue = '';\r\n    let convention = source.nameAssembleOrder\r\n\r\nif (typeof convention !== 'undefined' && convention ) { \r\n    convention = convention.toUpperCase()\r\n    \r\n    switch (convention) {\r\n        case \"P\": {\r\n            returnValue = \"P\";\r\n            break;\r\n        }\r\n        case \"E\": {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n        case \"B\": {\r\n            returnValue = \"PB\";\r\n            break;\r\n        }\r\n        case \"C\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        case \"D\": {\r\n            returnValue = \"BP\";\r\n            break;\r\n        }\r\n        default: {\r\n            returnValue = \"B\";\r\n            break;\r\n        }\r\n    }\r\n}else{\r\n    //if convention is empty:\r\n    returnValue = \"B\";\r\n}\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
-                "required": false
+                "required": true
             }
         },
         {
