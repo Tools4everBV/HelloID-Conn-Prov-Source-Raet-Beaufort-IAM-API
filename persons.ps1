@@ -584,7 +584,7 @@ try {
                 }
 
                 # Enhance employment with ipper upper OU for extra information
-                $upperUpperOU = $organizationUnitsGrouped["$($employment.organizationUnitUpper.parentOrgUnit)"]
+                $upperUpperOU = $organizationUnitsGrouped["$($employment.organizationUnitUpper_parentOrgUnit)"]
                 if ($null -ne $upperUpperOU) {
                     # In case multiple are found with the same ID, we always select the first one in the array
                     $upperUpperOU = $upperUpperOU | Select-Object -First 1
@@ -695,7 +695,7 @@ try {
                             }
 
                             # Enhance assignment with upper upper OU for extra information
-                            $upperUpperOU = $organizationUnitsGrouped["$($assignment.organizationUnitUpper.parentOrgUnit)"]
+                            $upperUpperOU = $organizationUnitsGrouped["$($assignment.organizationUnitUpper_parentOrgUnit)"]
                             if ($null -ne $upperUpperOU) {
                                 # In case multiple are found with the same ID, we always select the first one in the array
                                 $upperUpperOU = $upperUpperOU | Select-Object -First 1
@@ -752,8 +752,9 @@ try {
                             }
         
                             [Void]$contractsList.Add($employmentObject)
-                        } else {
-                             Write-Warning "Excluding person from export: $($_.ExternalId). Reason: No assignments found for person"
+                        }
+                        else {
+                            Write-Warning "Excluding person from export: $($_.ExternalId). Reason: No assignments found for person"
                         }
                     }
                 }
