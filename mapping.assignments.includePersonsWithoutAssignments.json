@@ -157,7 +157,7 @@
         {
             "name": "Details.HoursPerWeek",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_workingAmount.amountOfWork;\r\n    employmentValue = sourceContract.employment_workingAmount.amountOfWork;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_workingAmount;\r\n    employmentValue = sourceContract.employment_workingAmount;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue.amountOfWork;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue.amountOfWork;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -165,7 +165,7 @@
         {
             "name": "EndDate",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_endDate;\r\n    employmentValue = sourceContract.employment_dischargeDate;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        endDate = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        endDate = employmentValue;\r\n    }\r\n\r\n    if(endDate == '9999-12-31'){\r\n        returnValue = null;\r\n    } else {\r\n        returnValue = endDate;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    enddate = ''\r\n    assignmentValue = sourceContract.assignment_endDate;\r\n    employmentValue = sourceContract.employment_dischargeDate;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        endDate = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        endDate = employmentValue;\r\n    }\r\n\r\n    if(endDate == '9999-12-31'){\r\n        returnValue = null;\r\n    } else {\r\n        returnValue = endDate;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
