@@ -23,6 +23,7 @@ $includeAssignments = $c.includeAssignments
 $includePersonsWithoutAssignments = $c.includePersonsWithoutAssignments
 $excludePersonsWithoutContractsInHelloID = $c.excludePersonsWithoutContractsInHelloID
 $includeExtensions = $c.includeExtensions
+$useTimelines = $c.useTimelines
 
 $Script:AuthenticationUri = "https://connect.visma.com/connect/token"
 $Script:BaseUri = "https://api.youforce.com"
@@ -176,7 +177,11 @@ function Invoke-RaetWebRequestList {
     param (
         [parameter(Mandatory = $true)]
         [string]
-        $Url
+        $Url,
+
+        [parameter(Mandatory = $false)]
+        [string]
+        $ValidOn
     )
     
     # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
@@ -199,6 +204,11 @@ function Invoke-RaetWebRequestList {
             }
             else {
                 $SkipTakeUrl = "?take=1000"
+
+                if(-not([String]::IsNullOrEmpty($ValidOn)))
+                {
+                    $SkipTakeUrl = $SkipTakeUrl + "&ValidOn=$ValidOn"
+                }
             }
 
             $counter++
@@ -262,7 +272,6 @@ function Invoke-RaetWebRequestList {
 
 Write-Information "Starting person import. Base URI: $BaseUri"
 
-
 # Query persons
 try {
     Write-Verbose "Querying persons"
@@ -312,11 +321,26 @@ catch {
 try {
     Write-Verbose "Querying employments"
 
-    $employmentsList = Invoke-RaetWebRequestList -Url "$Script:BaseUri/iam/v1.0/employments"
+    if($useTimelines) {
+        $now = Get-Date
+        $validOn = (Get-Date -Format "yyyy-MM-dd")
 
-    # Group by personCode
-    $employmentsGrouped = $employmentsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
+        $employmentsList = Invoke-RaetWebRequestList -Url "$Script:BaseUri/iam/v1.0/employments/timelines" -ValidOn $validOn
+        $employmentsList = $employmentsList | Where-Object { -not([String]::IsNullOrEmpty($_.hireDate)) -and (Get-Date $_.hireDate) -le $now }
 
+        $employmentsListFuture = Invoke-RaetWebRequestList -Url "$Script:BaseUri/iam/v1.0/employments"
+        $employmentsListFuture = $employmentsListFuture | Where-Object { -not([String]::IsNullOrEmpty($_.hireDate)) -and  (Get-Date $_.hireDate) -gt $now }
+
+        # Group by personCode
+        $employmentsGrouped = ($employmentsList + $employmentsListFuture) | Group-Object personCode -CaseSensitive -AsHashTable -AsString
+    }
+    else {
+       $employmentsList = Invoke-RaetWebRequestList -Url "$Script:BaseUri/iam/v1.0/employments"
+       
+        # Group by personCode
+        $employmentsGrouped = $employmentsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
+
+    }
     Write-Information "Successfully queried employments. Result: $($employmentsList.Count)"
 }
 catch {
@@ -540,6 +564,30 @@ try {
         $contractsList = [System.Collections.ArrayList]::new()
         if ($null -ne $personEmployments) {
             foreach ($employment in $personEmployments) {
+                if($useTimelines) {
+                    foreach ($property in $employment.PsObject.Properties) {
+                        if($property.value -ne $null)
+                        {
+                            $type = $property.value.GetType().fullname
+                            if($type -eq 'System.Object[]')
+                            {
+                                $employment."$($property.name)" = $($property.value.value)
+                            }
+                        }
+                    }
+                    foreach ($property in $employment.workingAmount.PsObject.Properties) {
+                        $type = $property.value.GetType().fullname
+                        if($type -eq 'System.Object[]')
+                        {
+                            $employment.workingAmount."$($property.name)" = $($property.value.value)
+                        }
+                    }
+
+                    
+
+                    $employment | Add-Member -MemberType NoteProperty -Name "employmentCode" -Value $employment.contractCode -Force
+                }
+
                 # Enhance employment with jobProfile for extra information, such as: fullName
                 $jobProfile = $jobProfilesGrouped["$($employment.jobProfile)"]
                 if ($null -ne $jobProfile) {
@@ -760,9 +808,9 @@ try {
                 }
             }
 
-            # Remove unneccesary fields from object (to avoid unneccesary large objects)
-            # Remove employments, since the data is transformed into a seperate object: contracts
-            $_.PSObject.Properties.Remove('employments')
+             # Remove unneccesary fields from object (to avoid unneccesary large objects)
+             # Remove employments, since the data is transformed into a seperate object: contracts
+            # $_.PSObject.Properties.Remove('employments')
         }
         else {
             ### Be very careful when logging in a loop, only use this when the amount is below 100

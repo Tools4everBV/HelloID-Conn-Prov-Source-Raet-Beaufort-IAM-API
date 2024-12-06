@@ -68,6 +68,15 @@
     }
   },
   {
+    "key": "useTimelines",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Use timelines endpoint for employments",
+      "required": false
+    }
+  },
+  {
     "key": "isDebug",
     "type": "checkbox",
     "defaultValue": false,
