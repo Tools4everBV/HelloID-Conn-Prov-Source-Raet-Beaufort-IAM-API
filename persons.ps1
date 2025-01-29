@@ -330,7 +330,7 @@ try {
 
         $employmentsListFuture = Invoke-RaetWebRequestList -Url "$Script:BaseUri/iam/v1.0/employments"
         $employmentsListFuture = $employmentsListFuture | Where-Object { -not([String]::IsNullOrEmpty($_.hireDate)) -and  (Get-Date $_.hireDate) -gt $now }
-
+       
         # Group by personCode
         $employmentsGrouped = ($employmentsList + $employmentsListFuture) | Group-Object personCode -CaseSensitive -AsHashTable -AsString
     }
@@ -355,20 +355,54 @@ catch {
 # Query employment extensions
 try {
     if ($true -eq $includeExtensions) {
+
         Write-Verbose "Querying employment extensions"
 
-        $employmentExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUri/extensions/v1.0/iam/employments"
+        if($useTimelines) {
+            $now = Get-Date
+            $validOn = (Get-Date -Format "yyyy-MM-dd")
 
-        if ($null -ne $employmentExtensionsList) {
-            # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
-            $employmentExtensionsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
-            $employmentExtensionsList | Foreach-Object {
-                $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+            $employmentExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUri/extensions/v1.0/iam/employments/timelines" -ValidOn $validOn
+
+            if ($null -ne $employmentExtensionsList) {
+                # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
+                $employmentExtensionsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+                $employmentExtensionsList | Foreach-Object {
+                    $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+                }
             }
-        }
 
-        # Group by ExternalId
-        $employmentExtensionsGrouped = $employmentExtensionsList | Group-Object ExternalId -CaseSensitive -AsHashTable -AsString
+            # Group by ExternalId
+            $employmentExtensionsGrouped = $employmentExtensionsList | Group-Object ExternalId -CaseSensitive -AsHashTable -AsString
+
+            $employmentExtensionsListFuture = Invoke-RaetWebRequestList -Url "$BaseUri/extensions/v1.0/iam/employments/timelines"
+
+            if ($null -ne $employmentExtensionsListFuture) {
+                # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
+                $employmentExtensionsListFuture | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+                $employmentExtensionsListFuture | Foreach-Object {
+                    $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+                }
+            }
+
+            # Group by ExternalId
+            $employmentExtensionsFutureGrouped = $employmentExtensionsListFuture | Group-Object ExternalId -CaseSensitive -AsHashTable -AsString
+
+        }
+        else {
+            $employmentExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUri/extensions/v1.0/iam/employments"
+
+            if ($null -ne $employmentExtensionsList) {
+                # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
+                $employmentExtensionsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+                $employmentExtensionsList | Foreach-Object {
+                    $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+                }
+            }
+
+            # Group by ExternalId
+            $employmentExtensionsGrouped = $employmentExtensionsList | Group-Object ExternalId -CaseSensitive -AsHashTable -AsString
+        }
 
         Write-Information "Successfully queried employment extensions. Result: $($employmentExtensionsList.Count)"
     }
@@ -665,9 +699,27 @@ try {
                 # Get extension for employment, linking key is PersonCode + "_" + employmentCode
                 if ($true -eq $includeExtensions) {
                     if ($null -ne $employmentExtensionsGrouped) {
-                        $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                        if($useTimelines){
+                            if(-not([String]::IsNullOrEmpty($employment.hireDate)) -and  (Get-Date $employment.hireDate) -gt $now  ) {
+                                $employmentExtensions = $employmentExtensionsFutureGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                            }
+                            else {
+                                $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]    
+                            }
+                        }
+                        else {
+                            $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                        }
                         if ($null -ne $employmentExtensions) {
                             foreach ($employmentExtension in $employmentExtensions) {
+                                
+                                if($useTimelines) {
+                                    if($employmentExtension.timelineValues -ne $null)
+                                    {
+                                        $employmentExtension | Add-Member -MemberType NoteProperty -Name "value" -Value $($employmentExtension.timelineValues.value) -Force
+                                    }
+                                }
+
                                 # Add a property for each field in object
                                 foreach ($property in $employmentExtension.PsObject.Properties) {
                                     $employment | Add-Member -MemberType NoteProperty -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '') + "_" + $property.Name) -Value "$($property.value)" -Force
@@ -808,8 +860,8 @@ try {
                 }
             }
 
-             # Remove unneccesary fields from object (to avoid unneccesary large objects)
-             # Remove employments, since the data is transformed into a seperate object: contracts
+            # # Remove unneccesary fields from object (to avoid unneccesary large objects)
+            # # Remove employments, since the data is transformed into a seperate object: contracts
             # $_.PSObject.Properties.Remove('employments')
         }
         else {
