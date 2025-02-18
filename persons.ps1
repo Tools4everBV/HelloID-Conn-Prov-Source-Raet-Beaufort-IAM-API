@@ -694,35 +694,18 @@ try {
                     }
                 }
 
-                #region Custom - Enhance assignment with upper department(s) information
-                # Enhance employment with upper OU for extra information
-                $upperOU = $organizationUnitsGrouped["$($employment.organizationUnit_parentOrgUnit)"]
-                if ($null -ne $upperOU) {
-                    # In case multiple are found with the same ID, we always select the first one in the array
-                    $upperOU = $upperOU | Select-Object -First 1
-
-                    if (![string]::IsNullOrEmpty($upperOU)) {
-                        foreach ($property in $upperOU.PsObject.Properties) {
-                            # Add a property for each field in object
-                            $employment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpper_" + $property.Name) -Value $property.Value -Force
-                        }
+                # Enhance employment with comma seperated list of hierarchical department shortnames
+                $departmentHierarchy = [System.Collections.ArrayList]::new()
+                if ($null -ne $department) {
+                    [void]$departmentHierarchy.add($department)
+                    while (-NOT[String]::IsNullOrEmpty($department.parentOrgUnit)) {
+                        # In case multiple departments are found with same id, always select first we encounter
+                        $department = $organizationUnitsGrouped["$($department.parentOrgUnit)"] | Select-Object -First 1
+                        [void]$departmentHierarchy.add($department)
                     }
                 }
 
-                # Enhance employment with ipper upper OU for extra information
-                $upperUpperOU = $organizationUnitsGrouped["$($employment.organizationUnitUpper_parentOrgUnit)"]
-                if ($null -ne $upperUpperOU) {
-                    # In case multiple are found with the same ID, we always select the first one in the array
-                    $upperUpperOU = $upperUpperOU | Select-Object -First 1
-
-                    if (![string]::IsNullOrEmpty($upperUpperOU)) {
-                        foreach ($property in $upperUpperOU.PsObject.Properties) {
-                            # Add a property for each field in object
-                            $employment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpperUpper_" + $property.Name) -Value $property.Value -Force
-                        }
-                    }
-                }
-                #endregion Custom - Enhance assignment with upper department(s) information
+                $employment | Add-Member -MemberType NoteProperty -Name "DepartmentHierarchy" -Value ('"{0}"' -f ($departmentHierarchy.shortName -Join '","')) -Force
 
                 # Enhance employment with costAllocation for extra information, such as: fullName
                 # Get costAllocation for employment, linking key is PersonCode + "_" + employmentCode
@@ -810,35 +793,18 @@ try {
                                 }
                             }
 
-                            #region Custom - Enhance assignment with upper department(s) information
-                            # Enhance assignment with upper OU for extra information
-                            $upperOU = $organizationUnitsGrouped["$($assignment.organizationUnit_parentOrgUnit)"]
-                            if ($null -ne $upperOU) {
-                                # In case multiple are found with the same ID, we always select the first one in the array
-                                $upperOU = $upperOU | Select-Object -First 1
-
-                                if (![string]::IsNullOrEmpty($upperOU)) {
-                                    foreach ($property in $upperOU.PsObject.Properties) {
-                                        # Add a property for each field in object
-                                        $assignment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpper_" + $property.Name) -Value $property.Value -Force
-                                    }
+                            # Enhance employment with comma seperated list of hierarchical department shortnames
+                            $departmentHierarchy = [System.Collections.ArrayList]::new()
+                            if ($null -ne $department) {
+                                [void]$departmentHierarchy.add($department)
+                                while (-NOT[String]::IsNullOrEmpty($department.parentOrgUnit)) {
+                                    # In case multiple departments are found with same id, always select first we encounter
+                                    $department = $organizationUnitsGrouped["$($department.parentOrgUnit)"] | Select-Object -First 1
+                                    [void]$departmentHierarchy.add($department)
                                 }
                             }
 
-                            # Enhance assignment with upper upper OU for extra information
-                            $upperUpperOU = $organizationUnitsGrouped["$($assignment.organizationUnitUpper_parentOrgUnit)"]
-                            if ($null -ne $upperUpperOU) {
-                                # In case multiple are found with the same ID, we always select the first one in the array
-                                $upperUpperOU = $upperUpperOU | Select-Object -First 1
-
-                                if (![string]::IsNullOrEmpty($upperUpperOU)) {
-                                    foreach ($property in $upperUpperOU.PsObject.Properties) {
-                                        # Add a property for each field in object
-                                        $assignment | Add-Member -MemberType NoteProperty -Name ("organizationUnitUpperUpper_" + $property.Name) -Value $property.Value -Force
-                                    }
-                                }
-                            }
-                            #endregion Custom - Enhance assignment with upper department(s) information
+                            $assignment | Add-Member -MemberType NoteProperty -Name "DepartmentHierarchy" -Value ('"{0}"' -f ($departmentHierarchy.shortName -Join '","')) -Force
 
                             # Enhance assignment with costAllocation for extra information, such as: fullName
                             # Get costAllocation for assignment, linking key is PersonCode + "_" + costCenter
