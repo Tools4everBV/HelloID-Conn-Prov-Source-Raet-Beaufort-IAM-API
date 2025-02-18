@@ -330,7 +330,6 @@ try {
 
         $department = [PSCustomObject]@{
             ExternalId        = $organizationUnit.id
-            ShortName         = $organizationUnit.shortName
             DisplayName       = $organizationUnit.fullName
             ManagerExternalId = $managerId
             ParentExternalId  = $organizationUnit.parentOrgUnit
