@@ -3,6 +3,9 @@
 #
 # Version: 2.2.0
 #####################################################
+$Script:expirationTimeAccessToken = $null
+$Script:AuthenticationHeaders = $null
+
 $c = $configuration | ConvertFrom-Json
 
 # Set debug logging
@@ -23,68 +26,47 @@ $includeAssignments = $c.includeAssignments
 $includePersonsWithoutAssignments = $c.includePersonsWithoutAssignments
 $excludePersonsWithoutContractsInHelloID = $c.excludePersonsWithoutContractsInHelloID
 $includeExtensions = $c.includeExtensions
+$managerRoleCode = $c.managerRoleCode
 
 $Script:AuthenticationUri = "https://connect.visma.com/connect/token"
 $Script:BaseUri = "https://api.youforce.com"
 
 #region functions
-function Resolve-HTTPError {
+function Resolve-RaetBeaufortIAMAPIError {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
+        [Parameter(Mandatory)]
+        [object]
+        $ErrorObject
     )
     process {
         $httpErrorObj = [PSCustomObject]@{
-            FullyQualifiedErrorId = $ErrorObject.FullyQualifiedErrorId
-            MyCommand             = $ErrorObject.InvocationInfo.MyCommand
-            RequestUri            = $ErrorObject.TargetObject.RequestUri
-            ScriptStackTrace      = $ErrorObject.ScriptStackTrace
-            ErrorMessage          = ''
+            ScriptLineNumber = $ErrorObject.InvocationInfo.ScriptLineNumber
+            Line             = $ErrorObject.InvocationInfo.Line
+            ErrorDetails     = $ErrorObject.Exception.Message
+            FriendlyMessage  = $ErrorObject.Exception.Message
         }
-        if ($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') {
-            $httpErrorObj.ErrorMessage = $ErrorObject.ErrorDetails.Message
+        if (-not [string]::IsNullOrEmpty($ErrorObject.ErrorDetails.Message)) {
+            $httpErrorObj.ErrorDetails = $ErrorObject.ErrorDetails.Message
         }
         elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
-            $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+            if ($null -ne $ErrorObject.Exception.Response) {
+                $streamReaderResponse = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+                if (-not [string]::IsNullOrEmpty($streamReaderResponse)) {
+                    $httpErrorObj.ErrorDetails = $streamReaderResponse
+                }
+            }
+        }
+        try {
+            $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
+            # Make sure to inspect the error result object and add only the error message as a FriendlyMessage.
+            # $httpErrorObj.FriendlyMessage = $errorDetailsObject.message
+            $httpErrorObj.FriendlyMessage = $httpErrorObj.ErrorDetails # Temporarily assignment
+        }
+        catch {
+            $httpErrorObj.FriendlyMessage = $httpErrorObj.ErrorDetails
         }
         Write-Output $httpErrorObj
-    }
-}
-
-function Get-ErrorMessage {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
-    )
-    process {
-        $errorMessage = [PSCustomObject]@{
-            VerboseErrorMessage = $null
-            AuditErrorMessage   = $null
-        }
-
-        if ( $($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $httpErrorObject = Resolve-HTTPError -Error $ErrorObject
-
-            $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
-
-            $errorMessage.AuditErrorMessage = $httpErrorObject.ErrorMessage
-        }
-
-        # If error message empty, fall back on $ex.Exception.Message
-        if ([String]::IsNullOrEmpty($errorMessage.VerboseErrorMessage)) {
-            $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
-        }
-        if ([String]::IsNullOrEmpty($errorMessage.AuditErrorMessage)) {
-            $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
-        }
-
-        Write-Output $errorMessage
     }
 }
 
@@ -114,6 +96,8 @@ function New-RaetSession {
     }
 
     try {
+        $actionMessage = "creating Access Token at uri '$($AuthenticationUri)'"
+
         # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
@@ -124,19 +108,17 @@ function New-RaetSession {
             'tenant_id'     = $TenantId
         }        
         $splatAccessTokenParams = @{
-            Uri             = $Script:AuthenticationUri
-            Headers         = @{'Cache-Control' = "no-cache" }
-            Method          = 'POST'
-            ContentType     = "application/x-www-form-urlencoded"
-            Body            = $authorisationBody
-            UseBasicParsing = $true
+            Uri         = $Script:AuthenticationUri
+            Headers     = @{'Cache-Control' = "no-cache" }
+            Method      = 'POST'
+            ContentType = "application/x-www-form-urlencoded"
+            Body        = $authorisationBody
         }
 
-        Write-Verbose "Creating Access Token at uri '$($splatAccessTokenParams.Uri)'"
+        $result = Invoke-RestMethod @splatAccessTokenParams -Verbose:$false -ErrorAction Stop
 
-        $result = Invoke-RestMethod @splatAccessTokenParams -Verbose:$false
         if ($null -eq $result.access_token) {
-            throw $result
+            throw "Web request was successful, but no access token was returned."
         }
 
         $Script:expirationTimeAccessToken = (Get-Date).AddSeconds($result.expires_in)
@@ -150,15 +132,19 @@ function New-RaetSession {
     }
     catch {
         $ex = $PSItem
-        $errorMessage = Get-ErrorMessage -ErrorObject $ex
+        if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+            $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+            $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+            $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+        }
+        else {
+            $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+            $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+        }
 
-        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($($errorMessage.VerboseErrorMessage))"
-
-        $auditLogs.Add([PSCustomObject]@{
-                # Action  = "" # Optional
-                Message = "Error creating Access Token at uri ''$($splatAccessTokenParams.Uri)'. Please check credentials. Error Message: $($errorMessage.AuditErrorMessage)"
-                IsError = $true
-            })     
+        Write-Warning $warningMessage
+        throw $auditMessage
     }
 }
 
@@ -187,8 +173,13 @@ function Invoke-RaetWebRequestList {
     $triesCounter = 0
     do {
         try {
+            $actionMessage = "checking if access token is valid"
+
             $accessTokenValid = Confirm-AccessTokenIsValid
+
             if ($true -ne $accessTokenValid) {
+                $actionMessage = "creating new access token"
+
                 New-RaetSession -ClientId $clientId -ClientSecret $clientSecret -TenantId $tenantId
             }
 
@@ -203,15 +194,15 @@ function Invoke-RaetWebRequestList {
 
             $counter++
 
+            $actionMessage = "querying data from '$($Url + $SkipTakeUrl)'. Retry: $($retry). Counter: $($counter)"
+
             $splatGetDataParams = @{
-                Uri             = "$Url$SkipTakeUrl"
+                Uri             = "$($Url + $SkipTakeUrl)"
                 Headers         = $Script:AuthenticationHeaders
                 Method          = 'GET'
                 ContentType     = "application/json"
                 UseBasicParsing = $true
             }
-    
-            Write-Verbose "Querying data from '$($splatGetDataParams.Uri)'"
 
             $result = Invoke-RestMethod @splatGetDataParams
             # Check both the keys "values" and "value", since Extensions endpoint returns the data in "values" instead of "value"
@@ -235,26 +226,33 @@ function Invoke-RaetWebRequestList {
         }
         catch {           
             $ex = $PSItem
-            $errorMessage = Get-ErrorMessage -ErrorObject $ex
-    
-            Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
-            
+            if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+                $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+                $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+                $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+                $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+            }
+            else {
+                $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+                $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+            }
+
             $maxTries = 3
-            if ( ($($errorMessage.AuditErrorMessage) -Like "*Too Many Requests*" -or $($errorMessage.AuditErrorMessage) -Like "*Connection timed out*") -and $triesCounter -lt $maxTries ) {
+            if ( ($($auditMessage) -Like "*Too Many Requests*" -or $($auditMessage) -Like "*Connection timed out*") -and $triesCounter -lt $maxTries ) {
                 $triesCounter++
                 $retry = $true
                 $delay = 601 # Wait for 0,601 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
-                Write-Warning "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $($errorMessage.AuditErrorMessage). Trying again in '$delay' milliseconds for a maximum of '$maxTries' tries."
+                Write-Warning "$auditMessage. Trying again in '$delay' milliseconds for a maximum of '$maxTries' tries."
                 Start-Sleep -Milliseconds $delay
             }
             else {
                 $retry = $false
-                throw "Error querying data from '$($splatGetDataParams.Uri)'. Error Message: $($errorMessage.AuditErrorMessage)"
+                throw "$auditMessage"
             }
         }
     }while (-NOT[string]::IsNullOrEmpty($result.nextLink) -or $retry -eq $true)
 
-    Write-Verbose "Successfully queried data from '$($Url)'. Result count: $($ReturnValue.Count)"
+    Write-Verbose "Successfully queried data from '$($Url)'. Result count: $(@($ReturnValue).Count)"
 
     return $ReturnValue
 }
@@ -262,38 +260,46 @@ function Invoke-RaetWebRequestList {
 
 Write-Information "Starting person import. Base URI: $BaseUri"
 
-
 # Query persons
 try {
-    Write-Verbose "Querying persons"
+    $actionMessage = "querying persons at [$BaseUri/iam/v1.0/persons]"
 
     $personsList = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/persons"
 
     # Make sure persons are unique
     $persons = $personsList | Where-Object { $_.personCode -ne $null } | Sort-Object id -Unique
 
-    Write-Information "Successfully queried persons. Result: $($persons.Count)"
+    Write-Information "Successfully queried persons. Result: $(@($persons).Count)"
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"      
+    Write-Warning $warningMessage
 
-    throw "Error querying persons. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
 
 # Query person extensions
 try {
     if ($true -eq $includeExtensions) {
-        Write-Verbose "Querying person extensions"
+        $actionMessage = "querying person extensions at [$BaseUri/extensions/v1.0/iam/persons]"
 
         $personExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUri/extensions/v1.0/iam/persons"
 
         # Group by personCode
         $personExtensionsGrouped = $personExtensionsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
 
-        Write-Information "Successfully queried person extensions. Result: $($personExtensionsList.Count)"
+        Write-Information "Successfully queried person extensions. Result: $(@($personExtensionsList).Count)"
     }
     else { 
         Write-Information "Ignored querying person extensions because the configuration toggle to include extensions is: $($includeExtensions)"
@@ -301,37 +307,55 @@ try {
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"       
-
-    throw "Error querying person extensions. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
 
 # Query employments
 try {
-    Write-Verbose "Querying employments"
+    $actionMessage = "querying employments at [$BaseUri/iam/v1.0/employments]"
 
-    $employmentsList = Invoke-RaetWebRequestList -Url "$Script:BaseUri/iam/v1.0/employments"
+    $employmentsList = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/employments"
 
     # Group by personCode
     $employmentsGrouped = $employmentsList | Group-Object personCode -CaseSensitive -AsHashTable -AsString
 
-    Write-Information "Successfully queried employments. Result: $($employmentsList.Count)"
+    Write-Information "Successfully queried employments. Result: $(@($employmentsList).Count)"
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"         
-
-    throw "Error querying employments. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
 
 # Query employment extensions
 try {
     if ($true -eq $includeExtensions) {
-        Write-Verbose "Querying employment extensions"
+        $actionMessage = "querying employment extensions at [$BaseUri/extensions/v1.0/iam/employments]"
 
         $employmentExtensionsList = Invoke-RaetWebRequestList -Url "$BaseUri/extensions/v1.0/iam/employments"
 
@@ -346,7 +370,7 @@ try {
         # Group by ExternalId
         $employmentExtensionsGrouped = $employmentExtensionsList | Group-Object ExternalId -CaseSensitive -AsHashTable -AsString
 
-        Write-Information "Successfully queried employment extensions. Result: $($employmentExtensionsList.Count)"
+        Write-Information "Successfully queried employment extensions. Result: $(@($employmentExtensionsList).Count)"
     }
     else { 
         Write-Information "Ignored querying employmens extensions because the configuration toggle to include extensions is: $($includeExtensions)"
@@ -354,19 +378,35 @@ try {
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"            
-
-    throw "Error querying employment extensions. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
 
 # Query assignments
 if ($true -eq $includeAssignments) {
     try {
-        Write-Verbose "Querying assignments"
+        $actionMessage = "querying assignments at [$BaseUri/iam/v1.0/assignments]"
         
         $assignmentsList = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/assignments"
+
+        Write-Information "Successfully queried assignments. Result: $(@($assignmentsList).Count)"
+
+        # # Filter out archived assignments
+        # $assignmentsList = $assignmentsList | Where-Object { $_.isActive -ne $false }
+
+        # Write-Information "Successfully filtered out archived assignments. Result: $(@($assignmentsList).Count)"
 
         # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
         $assignmentsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
@@ -377,99 +417,178 @@ if ($true -eq $includeAssignments) {
         # Group by ExternalId
         $assignmentsGrouped = $assignmentsList | Group-Object ExternalId -AsHashTable
 
-        Write-Information "Successfully queried assignments. Result: $($assignmentsList.Count)"
     }
     catch {
         $ex = $PSItem
-        $errorMessage = Get-ErrorMessage -ErrorObject $ex
+        if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+            $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+            $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+            $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+        }
+        else {
+            $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+            $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+        }
     
-        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"        
-    
-        throw "Error querying assignments. Error Message: $($errorMessage.AuditErrorMessage)"
+        Write-Warning $warningMessage
+
+        throw $auditMessage
     }
 }
 
 # Query jobProfiles
 try {
-    Write-Verbose "Querying jobProfiles"
+    $actionMessage = "querying jobProfiles at [$BaseUri/iam/v1.0/jobProfiles]"
     
     $jobProfilesList = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/jobProfiles"
 
     # Group by id
     $jobProfilesGrouped = $jobProfilesList | Group-Object Id -AsHashTable
 
-    Write-Information "Successfully queried jobProfiles. Result: $($jobProfilesList.Count)"
+    Write-Information "Successfully queried jobProfiles. Result: $(@($jobProfilesList).Count)"
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"     
-
-    throw "Error querying jobProfiles. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
 
 # Query costAllocations
 try {
-    Write-Verbose "Querying costAllocations"
+    $actionMessage = "querying costAllocations at [$BaseUri/iam/v1.0/costAllocations]"
     
     $costAllocationsList = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/costAllocations"
 
-    # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
-    $costAllocationsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
+    # Add ExternalId property as linking key to employment, linking key is PersonCode + "_" + employmentCode
+    $costAllocationsList | Add-Member -MemberType NoteProperty -Name "EmploymentExternalId" -Value $null -Force
+    $costAllocationsList | Add-Member -MemberType NoteProperty -Name "AssignmentExternalId" -Value $null -Force
     $costAllocationsList | Foreach-Object {
-        $_.ExternalId = $_.PersonCode + "_" + $_.employmentCode
+        $_.EmploymentExternalId = $_.PersonCode + "_" + $_.employmentCode
+        $_.AssignmentExternalId = $_.PersonCode + "_" + $_.costCenterCode
     }
     
-    # Group by ExternalId
-    $costAllocationsGrouped = $costAllocationsList | Group-Object ExternalId -AsHashTable
+    # Group by EmploymentExternalId
+    $costAllocationsGroupedForEmployment = $costAllocationsList | Group-Object EmploymentExternalId -AsHashTable
 
-    Write-Information "Successfully queried costAllocations. Result: $($costAllocationsList.Count)"
+    # Group by AssignmentExternalId
+    $costAllocationsGroupedForAssignment = $costAllocationsList | Group-Object AssignmentExternalId -AsHashTable
+
+    Write-Information "Successfully queried costAllocations. Result: $(@($costAllocationsList).Count)"
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"    
-
-    throw "Error querying costAllocations. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
 
 # Query organizationUnits
 try {
-    Write-Verbose "Querying organizationUnits"
+    $actionMessage = "querying organizationUnits at [$BaseUri/iam/v1.0/organizationUnits]"
 
     $organizationUnits = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/organizationUnits"
 
     # Group by ExternalId
     $organizationUnitsGrouped = $organizationUnits | Group-Object id -AsHashTable -AsString
 
-    Write-Information "Successfully queried organizationUnits. Result: $($organizationUnits.Count)"
+    Write-Information "Successfully queried organizationUnits. Result: $(@($organizationUnits).Count)"
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"       
-
-    throw "Error querying organizationUnits. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
 
+# Query roleAssignments
 try {
-    Write-Verbose 'Enhancing and exporting person objects to HelloID'
+    $actionMessage = "querying roleAssignments at [$BaseUri/iam/v1.0/roleAssignments]"
+
+    $roleAssignments = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/roleAssignments"
+    Write-Information "Successfully queried roleAssignments. Result: $(@($roleAssignments).Count)"
+
+    # Filter Role assignments for only active and specific role, and sort descending on startDate and personCode to ensure consistent manager data
+    $currentDate = Get-Date
+    $roleAssignments = $roleAssignments | Where-Object { 
+        $_.startDate -as [datetime] -le $currentDate -and
+        ($_.endDate -eq $null -or $_.endDate -as [datetime] -ge $currentDate) -and
+        $_.shortName -eq $managerRoleCode
+    } | Sort-Object -Property { $_.startDate , [int]$_.personCode } -Descending
+
+    # Group on personCode (to match to person)
+    $roleAssignmentsGrouped = $roleAssignments | Group-Object personCode -AsHashTable -AsString
+
+    Write-Information "Successfully filtered for only active roleAssignments of role [$managerRoleCode]. Result: $(@($roleAssignments).Count)"
+}
+catch {
+    $ex = $PSItem
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
+
+    throw $auditMessage
+}
+#endRegion
+
+try {
+    $actionMessage = "enhancing and exporting person objects to HelloID"
 
     # Set counter to keep track of actual exported person objects
     $exportedPersons = 0
 
-    # Enhance the persons model
+    # Enhance the persons model with required properties
     $persons | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
     $persons | Add-Member -MemberType NoteProperty -Name "DisplayName" -Value $null -Force
     $persons | Add-Member -MemberType NoteProperty -Name "Contracts" -Value $null -Force
 
-    $persons  | ForEach-Object {
+    $persons | ForEach-Object {
         # Set required fields for HelloID
         $_.ExternalId = $_.personCode
-        $_.DisplayName = "$($_.knownAs) $($_.lastNameAtBirth) ($($_.ExternalId))" 
+        $_.DisplayName = "$($_.knownAs) $($_.lastNameAtBirth) ($($_.ExternalId))"
 
         # Transform emailAddresses and add to the person
         if ($null -ne $_.emailAddresses) {
@@ -482,7 +601,7 @@ try {
                 }
             }
 
-            # Remove unneccesary fields from  object (to avoid unneccesary large objects)
+            # Remove unnecessary fields from  object (to avoid unnecessary large objects)
             $_.PSObject.Properties.Remove('emailAddresses')
         }
 
@@ -497,7 +616,7 @@ try {
                 }
             }
 
-            # Remove unneccesary fields from object (to avoid unneccesary large objects)
+            # Remove unnecessary fields from object (to avoid unnecessary large objects)
             $_.PSObject.Properties.Remove('phoneNumbers')
         }
 
@@ -512,25 +631,32 @@ try {
                 }
             }
 
-            # Remove unneccesary fields from object (to avoid unneccesary large objects)
+            Remove unnecessary fields from object (to avoid unnecessary large objects)
             $_.PSObject.Properties.Remove('addresses')
         }
+
+        if ($null -ne $_.addresses) {
+            $_.PSObject.Properties.Remove('addresses')
+        }
+        #endRegion
 
         # Transform extensions and add to the person
         if ($true -eq $includeExtensions) {
             if ($null -ne $personExtensionsGrouped) {
+                $personExtensions = $null
                 $personExtensions = $personExtensionsGrouped[$_.personCode]
                 if ($null -ne $personExtensions) {
                     foreach ($personExtension in $personExtensions) {
-                        # Add a property for each field in object
-                        foreach ($property in $personExtension.PsObject.Properties) {
-                            $_ | Add-Member -MemberType NoteProperty -Name ("extension_" + $personExtension.fieldNameAlias.Replace(' ', '') + "_" + $property.Name) -Value "$($property.value)" -Force
+                        # Add fieldNameAlias, value and description as properties to employment object
+                        foreach ($property in $personExtension.PsObject.Properties | Where-Object { $_.Name -in @('fieldNameAlias', 'value', 'description') }) {
+                            $_ | Add-Member -MemberType NoteProperty -Name ("extension_" + $personExtension.bo4FieldCode.Replace(' ', '') + "_" + $property.Name) -Value "$($property.value)" -Force
                         }
                     }
                 }
             }
         }
-        # Remove unneccesary fields from object (to avoid unneccesary large objects) - Extensions are available via a seperate endpoint
+    
+        # Remove unnecessary fields from object (to avoid unnecessary large objects) - Extensions are available via a separate endpoint
         $_.PSObject.Properties.Remove('extensions')
 
         # Create contracts object
@@ -600,7 +726,7 @@ try {
 
                 # Enhance employment with costAllocation for extra information, such as: fullName
                 # Get costAllocation for employment, linking key is PersonCode + "_" + employmentCode
-                $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $employment.employmentCode)]
+                $costAllocation = $costAllocationsGroupedForEmployment[($_.personCode + "_" + $employment.employmentCode)]
                 if ($null -ne $costAllocation) {
                     # In case multiple are found with the same ID, we always select the first one in the array
                     $costAllocation = $costAllocation | Select-Object -First 1
@@ -617,29 +743,34 @@ try {
                 # Get extension for employment, linking key is PersonCode + "_" + employmentCode
                 if ($true -eq $includeExtensions) {
                     if ($null -ne $employmentExtensionsGrouped) {
+                        $employmentExtensions = $null
                         $employmentExtensions = $employmentExtensionsGrouped[($_.personCode + "_" + $employment.employmentCode)]
                         if ($null -ne $employmentExtensions) {
                             foreach ($employmentExtension in $employmentExtensions) {
-                                # Add a property for each field in object
-                                foreach ($property in $employmentExtension.PsObject.Properties) {
-                                    $employment | Add-Member -MemberType NoteProperty -Name ("extension_" + $employmentExtension.fieldNameAlias.Replace(' ', '') + "_" + $property.Name) -Value "$($property.value)" -Force
+                                # Add fieldNameAlias, value and description as properties to employment object
+                                foreach ($property in $employmentExtension.PsObject.Properties | Where-Object { $_.Name -in @('fieldNameAlias', 'value', 'description') }) {
+                                    $employment | Add-Member -MemberType NoteProperty -Name ("extension_" + $employmentExtension.bo4FieldCode.Replace(' ', '') + "_" + $property.Name) -Value "$($property.value)" -Force
                                 }
                             }
                         }
                     }
                 }
-                # Remove unneccesary fields from object (to avoid unneccesary large objects) - Extensions are available via a seperate endpoint
+                # Remove unnecessary fields from object (to avoid unnecessary large objects) - Extensions are available via a separate endpoint
                 $employment.PSObject.Properties.Remove('extensions')
 
                 if ($false -eq $includeAssignments) {
                     # Create Contract object(s) based on employments
 
-                    # Create custom employment object to include prefix of properties
+                    # Create employment object to include prefix of properties
                     $employmentObject = [PSCustomObject]@{}
                     $employment.psobject.properties | ForEach-Object {
                         $employmentObject | Add-Member -MemberType $_.MemberType -Name "employment_$($_.Name)" -Value $_.Value -Force
                     }
 
+                    # Add a property to indicate contract is employment
+                    $employmentObject | Add-Member -MemberType NoteProperty -Name "Type" -Value "Employment" -Force
+
+                    # Add employment data to contracts
                     [Void]$contractsList.Add($employmentObject)
                 }
                 else {
@@ -710,8 +841,8 @@ try {
                             #endregion Custom - Enhance assignment with upper department(s) information
 
                             # Enhance assignment with costAllocation for extra information, such as: fullName
-                            # Get costAllocation for assignment, linking key is PersonCode + "_" + assignmentCode
-                            $costAllocation = $costAllocationsGrouped[($_.personCode + "_" + $assignment.employmentCode)]
+                            # Get costAllocation for assignment, linking key is PersonCode + "_" + costCenter
+                            $costAllocation = $costAllocationsGroupedForAssignment[($_.personCode + "_" + $assignment.costCenter)]
                             if ($null -ne $costAllocation) {
                                 # In case multiple are found with the same ID, we always select the first one in the array
                                 $costAllocation = $costAllocation | Select-Object -First 1
@@ -724,7 +855,7 @@ try {
                                 }
                             }
 
-                            # Create custom assignment object to include prefix in properties
+                            # Create assignment object to include prefix in properties
                             $assignmentObject = [PSCustomObject]@{}
     
                             # Add employment object with prefix for property names
@@ -736,7 +867,10 @@ try {
                             $assignment.psobject.properties | ForEach-Object {
                                 $assignmentObject | Add-Member -MemberType $_.MemberType -Name "assignment_$($_.Name)" -Value $_.Value -Force
                             }
-    
+
+                            # Add a property to indicate contract is employment
+                            $assignmentObject | Add-Member -MemberType NoteProperty -Name "Type" -Value "Assignment" -Force
+
                             # Add employment and position data to contracts
                             [Void]$contractsList.Add($assignmentObject)
                         }
@@ -745,12 +879,16 @@ try {
                         if ($true -eq $includePersonsWithoutAssignments) {
                             # Add employment only data to contracts (in case of employments without assignments)
 
-                            # Create custom employment object to include prefix of properties
+                            # Create employment object to include prefix of properties
                             $employmentObject = [PSCustomObject]@{}
                             $employment.psobject.properties | ForEach-Object {
                                 $employmentObject | Add-Member -MemberType $_.MemberType -Name "employment_$($_.Name)" -Value $_.Value -Force
                             }
-        
+
+                            # Add a property to indicate contract is employment
+                            $employmentObject | Add-Member -MemberType NoteProperty -Name "Type" -Value "Employment" -Force
+
+                            # Add employment data to contracts
                             [Void]$contractsList.Add($employmentObject)
                         }
                         else {
@@ -760,22 +898,18 @@ try {
                 }
             }
 
-            # Remove unneccesary fields from object (to avoid unneccesary large objects)
-            # Remove employments, since the data is transformed into a seperate object: contracts
+            # Remove unnecessary fields from object (to avoid unnecessary large objects)
+            # Remove employments, since the data is transformed into a separate object: contracts
             $_.PSObject.Properties.Remove('employments')
         }
         else {
-            ### Be very careful when logging in a loop, only use this when the amount is below 100
-            ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
-            # Write-Warning "No employments found for person: $($_.ExternalId)"
+            Write-Warning "No employments found for person: $($_.ExternalId)"
         }
 
         # Add Contracts to person
         if ($null -ne $contractsList) {
-            # This example can be used by the consultant if you want to filter out persons with an empty array as contract
-            # *** Please consult with the Tools4ever consultant before enabling this code. ***
             if ($contractsList.Count -eq 0 -and $true -eq $excludePersonsWithoutContractsInHelloID) {
-                # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Contracts is an empty array"
+                Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Contracts is an empty array"
                 return
             }
             else {
@@ -783,9 +917,7 @@ try {
             }
         }
         elseif ($true -eq $excludePersonsWithoutContractsInHelloID) {
-            ### Be very careful when logging in a loop, only use this when the amount is below 100
-            ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
-            # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Person has no contract data"
+            Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Person has no contract data"
             return
         }
 
@@ -804,9 +936,18 @@ try {
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-RaetBeaufortIAMAPIError -ErrorObject $ex
+        $auditMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+        $warningMessage = "Error at Line [$($errorObj.ScriptLineNumber)]: $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+        $warningMessage = "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    
+    Write-Warning $warningMessage
 
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"     
-
-    throw "Could not enhance and export person objects to HelloID. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw $auditMessage
 }
