@@ -585,10 +585,23 @@ try {
     $persons | Add-Member -MemberType NoteProperty -Name "DisplayName" -Value $null -Force
     $persons | Add-Member -MemberType NoteProperty -Name "Contracts" -Value $null -Force
 
+    # Enhance the persons model with additional properties
+    $persons | Add-Member -MemberType NoteProperty -Name "ManagerOf" -Value $null -Force
+
     $persons | ForEach-Object {
         # Set required fields for HelloID
         $_.ExternalId = $_.personCode
         $_.DisplayName = "$($_.knownAs) $($_.lastNameAtBirth) ($($_.ExternalId))"
+
+        # Add comma separated list with all departments person is manager of
+        $personRoleAssignments = $null
+        $personRoleAssignments = $roleAssignmentsGrouped["$($_.personCode)"] | Sort-Object -Property organizationUnitCode
+        if ($null -ne $personRoleAssignments) {
+            $_.ManagerOf = '"{0}"' -f ($personRoleAssignments.organizationUnitCode -Join '","')
+        }
+        else {
+            $_.ManagerOf = $null
+        }
 
         # Transform emailAddresses and add to the person
         if ($null -ne $_.emailAddresses) {
