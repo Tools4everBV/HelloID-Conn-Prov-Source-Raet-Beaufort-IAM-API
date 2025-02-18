@@ -403,8 +403,8 @@ if ($true -eq $includeAssignments) {
 
         Write-Information "Successfully queried assignments. Result: $(@($assignmentsList).Count)"
 
-        # # Filter out archived assignments
-        # $assignmentsList = $assignmentsList | Where-Object { $_.isActive -ne $false }
+        # Filter out archived assignments
+        $assignmentsList = $assignmentsList | Where-Object { $_.isActive -ne $false }
 
         # Write-Information "Successfully filtered out archived assignments. Result: $(@($assignmentsList).Count)"
 
