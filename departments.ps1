@@ -280,10 +280,21 @@ try {
     Write-Verbose "Querying roleAssignments"
 
     $roleAssignments = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/roleAssignments"
-    # Sort Role assignments on personCode to make sure we always have the same manager with the same data
-    $roleAssignments = $roleAssignments | Sort-Object -Property { [int]$_.personCode }
 
     Write-Information "Successfully queried roleAssignments. Result: $($roleAssignments.Count)"
+
+    # Filter Role assignments for only active and specific role, and sort descending on startDate and personCode to ensure consistent manager data
+    $currentDate = Get-Date
+    $roleAssignments = $roleAssignments | Where-Object { 
+        $_.startDate -as [datetime] -le $currentDate -and
+        ($_.endDate -eq $null -or $_.endDate -as [datetime] -ge $currentDate) -and
+        $_.shortName -eq $managerRoleCode
+    } | Sort-Object -Property { $_.startDate , [int]$_.personCode } -Descending
+
+    # Group on organizationUnit (to match to department)
+    $roleAssignmentsGrouped = $roleAssignments | Group-Object -Property organizationUnit -AsHashTable -AsString
+
+    Write-Information "Successfully filtered roleAssignments for only active and specific role [$($managerRoleCode)]. Result: $(@($roleAssignments).Count)"
 }
 catch {
     $ex = $PSItem
@@ -303,25 +314,18 @@ try {
     $managerActiveCompareDate = Get-Date
 
     foreach ($organizationUnit in $organizationUnits) {
-        $ouRoleAssignments = $roleAssignments | Where-Object { $_.organizationUnit -eq $organizationUnit.id }
-        # Sort role assignments on person code to make sure the order is always the same (if the data is the same)
-        $ouRoleAssignments = $ouRoleAssignments | Sort-Object personCode
+        # Get manager from roleassignments
+        $ouRoleAssignments = $null
+        $ouRoleAssignments = $roleAssignmentsGrouped["$($organizationUnit.id)"]
+        if ($null -ne $ouRoleAssignments) {
+            # Organizational units may contain multiple managers (per organizational unit). There's no way to specify which manager is primary
+            # Therefore we always select the first one we encounter
+            $roleAssignment = $ouRoleAssignments | Select-Object -First 1
 
-        # Organizational units may contain multiple managers (per organizational unit). There's no way to specify which manager is primary
-        # We check of the manager assignment is active and then select the first one we come across that's valid
-        $managerId = $null
-        foreach ($roleAssignment in $ouRoleAssignments) {
-            if (![string]::IsNullOrEmpty($roleAssignment)) {
-                if ($roleAssignment.ShortName -eq 'MGR') {
-                    $startDate = ([Datetime]::ParseExact($roleAssignment.startDate, 'yyyy-MM-dd', $null))
-                    $endDate = ([Datetime]::ParseExact($roleAssignment.endDate, 'yyyy-MM-dd', $null))
-
-                    if ($startDate -lt $managerActiveCompareDate -and $endDate -ge $managerActiveCompareDate ) {
-                        $managerId = $roleAssignment.personCode
-                        break
-                    }
-                }
-            }
+            $managerId = $roleAssignment.personCode
+        }
+        else {
+            $managerId = $null
         }
 
         $department = [PSCustomObject]@{
