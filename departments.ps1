@@ -19,6 +19,7 @@ $WarningPreference = "Continue"
 $clientId = $c.clientId
 $clientSecret = $c.clientSecret
 $tenantId = $c.tenantId
+$managerRoleCode = $c.managerRoleCode
 
 $Script:AuthenticationUri = "https://connect.visma.com/connect/token"
 $Script:BaseUri = "https://api.youforce.com"
