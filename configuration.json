@@ -32,6 +32,16 @@
     }
   },
   {
+    "key": "managerRoleCode",
+    "type": "input",
+    "defaultValue": "MGR",
+    "templateOptions": {
+      "label": "Manager Role Code",
+      "placeholder": "MGR",
+      "required": true
+    }
+  },
+  {
     "key": "includeAssignments",
     "type": "checkbox",
     "defaultValue": true,
