@@ -1,26 +1,26 @@
 ## HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort
 
-| :information_source: Information |
-|:---------------------------|
-| This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.       |
+| :information_source: Information                                                                                                                                                                                                                                                                                                                                                       |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements. |
 
-| :warning: Warning |
-|:---------------------------|
-| The latest version of this connector requires **new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059).       |
+| :warning: Warning                                                                                                                                                                                                                                                                                                   |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The latest version of this connector requires **new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059). |
 <br />
 <p align="center">
   <img src="https://www.tools4ever.nl/connector-logos/vismaraet-logo.png" width="500">
 </p>
 
 ## Versioning
-| Version | Description | Date |
-| - | - | - |
-| 2.2.0   | Updated to output all available extension properties and values | 2023/07/10  |
-| 2.1.0   | Updated to output person object flat (where necessary) | 2023/04/20  |
-| 2.0.0   | Updated to use new endpoints and support extensions | 2022/12/14  |
-| 1.1.1   | Updated to handle too many request errors | 2022/09/19  |
-| 1.1.0   | Updated perforance and logging | 2022/05/24  |
-| 1.0.0   | Initial release | 2020/08/18  |
+| Version | Description                                                     | Date       |
+| ------- | --------------------------------------------------------------- | ---------- |
+| 2.2.0   | Updated to output all available extension properties and values | 2023/07/10 |
+| 2.1.0   | Updated to output person object flat (where necessary)          | 2023/04/20 |
+| 2.0.0   | Updated to use new endpoints and support extensions             | 2022/12/14 |
+| 1.1.1   | Updated to handle too many request errors                       | 2022/09/19 |
+| 1.1.0   | Updated perforance and logging                                  | 2022/05/24 |
+| 1.0.0   | Initial release                                                 | 2020/08/18 |
 
 ## Table of contents
 - [HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort](#helloid-conn-prov-source-raet-iam-api-beaufort)
@@ -68,10 +68,10 @@ https://developers.youforce.com/api-status
 
 
 ## Differences between RAET versions
-|  Differences | ManagerId  |  Person | nameAssembleOrder  | Assignments |
-|---|---|---|---|---|
-| HR Core Business:   |OrganizationUnits      |  A PersonObject foreach employement    |  Digits (0,1,2,3,4,)     | Not Supported  |
-| HR Beaufort  | RoleAssignment        | One PersonObject with multiple Employments  | Letters(E,P,C,B,D)     | Available  |
+| Differences       | ManagerId         | Person                                     | nameAssembleOrder   | Assignments   |
+| ----------------- | ----------------- | ------------------------------------------ | ------------------- | ------------- |
+| HR Core Business: | OrganizationUnits | A PersonObject foreach employement         | Digits (0,1,2,3,4,) | Not Supported |
+| HR Beaufort       | RoleAssignment    | One PersonObject with multiple Employments | Letters(E,P,C,B,D)  | Available     |
 ##### HR Beaufort
  - Manager in de Role Assignements 
  - nameAssembleOrder  Letters(E,P,C,B,D)
@@ -106,14 +106,15 @@ Before the connector can be used to retrieve employee information, the following
 ### Connection settings
 The following settings are required to run the source import.
 
-| Setting                                       | Description                                                               | Mandatory   |
-| --------------------------------------------- | ------------------------------------------------------------------------- | ----------- |
-| Client ID                                     | The Client ID to connect to the Raet IAM API (created when registering the App in in the Visma Developer portal).                             | Yes         |
-| Client Secret                                 | The Client Secret to connect to the Raet IAM API (created when registering the App in in the Visma Developer portal).                         | Yes         |
-| Tenant ID                                     | The Tenant ID to specify to which tenant to connect to the Raet IAM API(available in the Visma Developer portal after the invitation code has been accepted).  | Yes         |
-| Include assignments                           | Include assignments yes/no.                                               | No          |
-| Include persons without assignments           | Include persons without assignments yes/no.                               | No          |
-| Exclude persons without contracts in HelloID  | Exclude persons without contracts in HelloID yes/no.                      | No          |
+| Setting                                      | Description                                                                                                                                                   | Mandatory |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| Client ID                                    | The Client ID to connect to the Raet IAM API (created when registering the App in in the Visma Developer portal).                                             | Yes       |
+| Client Secret                                | The Client Secret to connect to the Raet IAM API (created when registering the App in in the Visma Developer portal).                                         | Yes       |
+| Tenant ID                                    | The Tenant ID to specify to which tenant to connect to the Raet IAM API(available in the Visma Developer portal after the invitation code has been accepted). | Yes       |
+| Manager Role Code                            | The role code that indicates a manager in the RoleAssignments.                                                                                                | Yes       |
+| Include assignments                          | Include assignments yes/no.                                                                                                                                   | No        |
+| Include persons without assignments          | Include persons without assignments yes/no.                                                                                                                   | No        |
+| Exclude persons without contracts in HelloID | Exclude persons without contracts in HelloID yes/no.                                                                                                          | No        |
 
 ### Prerequisites
  - Authorized Raet Developers account in order to request and receive the API credentials. See: https://developers.youforce.com. Make sure your client does the IAM API access request themselves on behalf of your own Raet Developers account (don't use Tools4ever, but your own developer account). More info about Raet Developers Portal: https://youtu.be/M9RHvm_KMh0
