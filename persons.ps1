@@ -644,7 +644,7 @@ try {
                 }
             }
 
-            Remove unnecessary fields from object (to avoid unnecessary large objects)
+            # Remove unnecessary fields from object (to avoid unnecessary large objects)
             $_.PSObject.Properties.Remove('addresses')
         }
 
@@ -882,13 +882,17 @@ try {
             $_.PSObject.Properties.Remove('employments')
         }
         else {
-            Write-Warning "No employments found for person: $($_.ExternalId)"
+            ### Be very careful when logging in a loop, only use this when the amount is below 100
+            ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
+            # Write-Warning "No employments found for person: $($_.ExternalId)"
         }
 
         # Add Contracts to person
         if ($null -ne $contractsList) {
             if ($contractsList.Count -eq 0 -and $true -eq $excludePersonsWithoutContractsInHelloID) {
-                Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Contracts is an empty array"
+                ### Be very careful when logging in a loop, only use this when the amount is below 100
+                ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
+                # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Contracts is an empty array"
                 return
             }
             else {
@@ -896,7 +900,9 @@ try {
             }
         }
         elseif ($true -eq $excludePersonsWithoutContractsInHelloID) {
-            Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Person has no contract data"
+            ### Be very careful when logging in a loop, only use this when the amount is below 100
+            ### When this would log over 100 lines, please refer from using this in HelloID and troubleshoot this in local PS
+            # Write-Warning "Excluding person from export: $($_.ExternalId). Reason: Person has no contract data"
             return
         }
 
