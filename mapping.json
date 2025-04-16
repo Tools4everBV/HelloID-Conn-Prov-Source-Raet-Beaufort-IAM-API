@@ -181,7 +181,7 @@
         {
             "name": "EndDate",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = sourceContract.assignment_endDate;\r\n\r\n    if(sourceContract.assignment_endDate == '9999-12-31'){\r\n        returnValue = null;\r\n    }\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = sourceContract.assignment_endDate;\r\n\r\n    if(sourceContract.assignment_endDate == '9999-12-31'){\r\n        returnValue = null;\r\n    }\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
