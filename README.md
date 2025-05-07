@@ -9,7 +9,7 @@
 | The latest version of this connector requires **new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059). |
 <br />
 <p align="center">
-  ![Logo](Logo.png)
+  <img src="https://github.com/Tools4everBV/HelloID-Conn-Prov-Source-Raet-Beaufort-IAM-API/blob/main/Logo.png?raw=true" width="500" />
 </p>
 
 ## Versioning
