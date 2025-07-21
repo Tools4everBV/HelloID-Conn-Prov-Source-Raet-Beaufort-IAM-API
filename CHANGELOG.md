@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Script variable clearing added at the top of scripts to support multiple executions in the same session.
 - Logging now includes the filtered count of unarchived assignments by default.
+- **Changelog file (`CHANGELOG.md`) added** to document all notable changes going forward.
 
 ### Changed
 
@@ -32,19 +33,11 @@ All notable changes to this project will be documented in this file. The format 
 - Fixed typo in mapping.
 - Resolved mapping issues as reported in issue #34.
 
-### Contributors
-- @Rick-Jongbloed
-- @rschouten97
-
 ## [2.2.5] - 28-05-2024
 
 ### Changed
 - Fix for mapping errors.
 - Implemented and tested mapping changes proposed in issue #24.
-
-### Contributors
-
-- @Rick-Jongbloed
 
 ## [2.2.4] - 21-03-2024
 
@@ -52,27 +45,17 @@ All notable changes to this project will be documented in this file. The format 
 
 - Fixed upper OU variables.
 
-### Contributors
-
-- @rschouten97
-
 ## [2.2.3] - 21-03-2024
 
 ### Changed
 
 - Fixed lowercase `nameAssembleOrder`.
 
-### Contributors
-- @rnieuweveen
 ## [2.2.2] - 15-03-2024
 
 ### Changed
 
 - Updated `persons.ps1`.
-
-### Contributors
-
-- @rschouten97
 
 ## [2.2.1] - 22-08-2023
 
@@ -87,13 +70,6 @@ _No changelog provided._
 - Fixed issue where no data was returned.
 - Formatting and logging enhancements.
 - Improved extension support.
-
-### Contributors
-
-- @rhouthuijzen
-- @rschouten97
-- @Maikel-B
-- @jbreek
 
 ## [2.1.0] - 20-04-2023
 
