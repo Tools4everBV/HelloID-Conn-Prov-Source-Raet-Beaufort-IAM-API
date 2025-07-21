@@ -156,8 +156,8 @@
         },
         {
             "name": "Details.HoursPerWeek",
-            "mode": "field",
-            "value": "assignment_workingAmount.amountOfWork",
+            "mode": "complex",
+            "value": "function getHours() {\r\n    let hours = null;\r\n    \r\n    if (typeof sourceContract.assignment_workingAmount !== 'undefined' && sourceContract.assignment_workingAmount) {\r\n        hours = sourceContract.assignment_workingAmount.amountOfWork;\r\n    }\r\n\r\n    return hours;\r\n}\r\n\r\ngetHours();",
             "validation": {
                 "required": false
             }
