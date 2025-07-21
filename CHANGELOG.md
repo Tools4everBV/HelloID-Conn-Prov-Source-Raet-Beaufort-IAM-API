@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file. The format 
 - Script variable clearing added at the top of scripts to support multiple executions in the same session.
 - Logging now includes the filtered count of unarchived assignments by default.
 - **Changelog file (`CHANGELOG.md`) added** to document all notable changes going forward.
+- **GitHub issue templates** added to standardize bug reports and feature requests.
+- **CI/CD YAML files** (`createRelease.yml` and `verifyChangelog.yml`) added to automate release creation and changelog validation.
 
 ### Changed
 
