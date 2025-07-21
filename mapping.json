@@ -149,7 +149,7 @@
         {
             "name": "Department.ExternalId",
             "mode": "field",
-            "value": "assignment_organizationUnit_id",
+            "value": "assignment_organizationUnit_shortName",
             "validation": {
                 "required": false
             }
