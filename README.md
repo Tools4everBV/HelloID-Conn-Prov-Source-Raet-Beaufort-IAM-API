@@ -3,20 +3,22 @@
 > [!IMPORTANT]  
 > This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
 
-> [!WARNING] BREAKING CHANGE IN V3.0.0
-> Version 3.0.0 introduces a breaking change in how departments are mapped.  
-> The connector now defaults to using the department’s `shortName` instead of its `id`.
-
-> If your configuration still relies on the department `id`, you must **explicitly update** the `departments.ps1` script and field mappings to reflect this change.  
-> Without this update, HelloID may process incorrect or unintended department data.
-
+#### ⚠️ BREAKING CHANGE IN V3.0.0
+> [!WARNING]
+> **Version 3.0.0 introduces a breaking change in how departments are mapped.**  
+> The connector now **defaults to using the department’s `shortName`** instead of its `id`.
+>
+> If your configuration still uses `id`, you must **update the `departments.ps1` script and field mappings**.  
+> Without this change, HelloID may process incorrect or unintended department data.
+> 
 > **Action required before upgrading!**
 > You have two options:
 > - Update your configuration (e.g., Business Rules, targetmappings, etc.) to use `shortName` (recommended).
 > - Or modify the code to continue using `id` (not recommended, as `shortName` is required for compatibility with other systems).
 
-> [!WARNING] BREAKING CHANGE IN V2.0.0
-> Version 2.0.0 introduces a breaking change requiring **new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059)
+#### ⚠️ BREAKING CHANGE IN V2.0.0
+> [!WARNING]
+> **Version 2.0.0 introduces a breaking change requiring new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059)
 
 <p align="center">
   <img src="https://github.com/Tools4everBV/HelloID-Conn-Prov-Source-Raet-Beaufort-IAM-API/blob/main/Logo.png?raw=true" width="500" />
