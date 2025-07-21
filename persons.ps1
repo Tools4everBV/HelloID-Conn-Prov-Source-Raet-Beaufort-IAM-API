@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Persons
 #
-# Version: 2.3.0
+# Version: 3.0.0
 #####################################################
 $Script:expirationTimeAccessToken = $null
 $Script:AuthenticationHeaders = $null
