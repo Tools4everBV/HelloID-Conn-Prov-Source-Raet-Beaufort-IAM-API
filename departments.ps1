@@ -3,6 +3,9 @@
 #
 # Version: 2.3.0
 #####################################################
+$Script:expirationTimeAccessToken = $null
+$Script:AuthenticationHeaders = $null
+
 $c = $configuration | ConvertFrom-Json
 
 # Set debug logging
