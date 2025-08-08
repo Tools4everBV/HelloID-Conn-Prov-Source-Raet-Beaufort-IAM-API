@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Persons
 #
-# Version: 2.3.0
+# Version: 3.0.0
 #####################################################
 $Script:expirationTimeAccessToken = $null
 $Script:AuthenticationHeaders = $null
@@ -406,7 +406,7 @@ if ($true -eq $includeAssignments) {
         # Filter out archived assignments
         $assignmentsList = $assignmentsList | Where-Object { $_.isActive -ne $false }
 
-        # Write-Information "Successfully filtered out archived assignments. Result: $(@($assignmentsList).Count)"
+        Write-Information "Successfully filtered out archived assignments. Result: $(@($assignmentsList).Count)"
 
         # Add ExternalId property as linking key to contract, linking key is PersonCode + "_" + employmentCode
         $assignmentsList | Add-Member -MemberType NoteProperty -Name "ExternalId" -Value $null -Force
@@ -416,7 +416,6 @@ if ($true -eq $includeAssignments) {
 
         # Group by ExternalId
         $assignmentsGrouped = $assignmentsList | Group-Object ExternalId -AsHashTable
-
     }
     catch {
         $ex = $PSItem

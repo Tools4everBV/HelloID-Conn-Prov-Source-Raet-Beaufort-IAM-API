@@ -1,26 +1,39 @@
 ## HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort
 
-| :information_source: Information                                                                                                                                                                                                                                                                                                                                                       |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements. |
+> [!IMPORTANT]  
+> This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
 
-| :warning: Warning                                                                                                                                                                                                                                                                                                   |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The latest version of this connector requires **new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059). |
-<br />
+#### ⚠️ BREAKING CHANGE IN V3.0.0
+> [!WARNING]
+> **Version 3.0.0 introduces a breaking change in how departments are mapped.**  
+> The connector now **defaults to using the department’s `shortName`** instead of its `id`.
+>
+> If your configuration still uses `id`, you must **update the `departments.ps1` script and field mappings**.  
+> Without this change, HelloID may process incorrect or unintended department data.
+> 
+> **Action required before upgrading!**
+> You have two options:
+> - Update your configuration (e.g., Business Rules, targetmappings, etc.) to use `shortName` (recommended).
+> - Or modify the code to continue using `id` (not recommended, as `shortName` is required for compatibility with other systems).
+
+#### ⚠️ BREAKING CHANGE IN V2.0.0
+> [!WARNING]
+> **Version 2.0.0 introduces a breaking change requiring new api credentials**. To get these, please follow the [Visma documentation on how to register the App and grant access to client data](https://community.visma.com/t5/Kennisbank-Youforce-API/Visma-Developer-portal-een-account-aanmaken-applicatie/ta-p/527059)
+
 <p align="center">
   <img src="https://github.com/Tools4everBV/HelloID-Conn-Prov-Source-Raet-Beaufort-IAM-API/blob/main/Logo.png?raw=true" width="500" />
 </p>
 
 ## Versioning
-| Version | Description                                                     | Date       |
-| ------- | --------------------------------------------------------------- | ---------- |
-| 2.2.0   | Updated to output all available extension properties and values | 2023/07/10 |
-| 2.1.0   | Updated to output person object flat (where necessary)          | 2023/04/20 |
-| 2.0.0   | Updated to use new endpoints and support extensions             | 2022/12/14 |
-| 1.1.1   | Updated to handle too many request errors                       | 2022/09/19 |
-| 1.1.0   | Updated perforance and logging                                  | 2022/05/24 |
-| 1.0.0   | Initial release                                                 | 2020/08/18 |
+| Version | Description                                                                   | Date       |
+| ------- | ----------------------------------------------------------------------------- | ---------- |
+| 3.0.0   | BREAKING CHANGE: Departments now default to using `shortName` instead of `id` | 2025/07/21 |
+| 2.2.0   | Updated to output all available extension properties and values               | 2023/07/10 |
+| 2.1.0   | Updated to output person object flat (where necessary)                        | 2023/04/20 |
+| 2.0.0   | Updated to use new endpoints and support extensions                           | 2022/12/14 |
+| 1.1.1   | Updated to handle too many request errors                                     | 2022/09/19 |
+| 1.1.0   | Updated performance and logging                                               | 2022/05/24 |
+| 1.0.0   | Initial release                                                               | 2020/08/18 |
 
 ## Table of contents
 - [HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort](#helloid-conn-prov-source-raet-iam-api-beaufort)

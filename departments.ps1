@@ -1,8 +1,11 @@
 #####################################################
 # HelloID-Conn-Prov-Source-RAET-IAM-API-Beaufort-Departments
 #
-# Version: 2.3.0
+# Version: 3.0.0
 #####################################################
+$Script:expirationTimeAccessToken = $null
+$Script:AuthenticationHeaders = $null
+
 $c = $configuration | ConvertFrom-Json
 
 # Set debug logging
@@ -257,13 +260,16 @@ function Invoke-RaetWebRequestList {
 }
 #endregion functions
 
-Write-Information "Starting department import. Base URL: $BaseUrl"
+Write-Information "Starting department import. Base URL: $BaseUri"
 
 # Query organizationUnits
 try {
     Write-Verbose "Querying organizationUnits"
 
     $organizationUnits = Invoke-RaetWebRequestList -Url "$BaseUri/iam/v1.0/organizationUnits"
+
+    # Group on id (to match to parent id)
+    $organizationUnitsGrouped = $organizationUnits | Group-Object -Property id -AsHashTable -AsString
 
     Write-Information "Successfully queried organizationUnits. Result: $($organizationUnits.Count)"
 }
@@ -312,8 +318,6 @@ try {
     # Set counter to keep track of actual exported person objects
     $exportedDepartments = 0
 
-    $managerActiveCompareDate = Get-Date
-
     foreach ($organizationUnit in $organizationUnits) {
         # Get manager from roleassignments
         $ouRoleAssignments = $null
@@ -329,11 +333,17 @@ try {
             $managerId = $null
         }
 
+        # Get parent department object
+        $parentDepartment = $null
+        if (-not[String]::IsNullOrEmpty($organizationUnit.parentOrgUnit)) {
+            $parentDepartment = $organizationUnitsGrouped["$($organizationUnit.parentOrgUnit)"]
+        }
+
         $department = [PSCustomObject]@{
-            ExternalId        = $organizationUnit.id
+            ExternalId        = $organizationUnit.shortName
             DisplayName       = $organizationUnit.fullName
             ManagerExternalId = $managerId
-            ParentExternalId  = $organizationUnit.parentOrgUnit
+            ParentExternalId  = if ($null -ne $parentDepartment) { $parentDepartment.shortName } else { $null }
         }
 
         # Sanitize and export the json
