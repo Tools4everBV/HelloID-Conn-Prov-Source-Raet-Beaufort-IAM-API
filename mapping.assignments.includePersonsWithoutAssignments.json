@@ -117,7 +117,7 @@
         {
             "name": "CostCenter.Code",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_costAllocation_costCenterCode;\r\n    employmentValue = sourceContract.employment_costAllocation_costCenterCode;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_costAllocation_costCenterCode;\r\n    let employmentValue = sourceContract.employment_costAllocation_costCenterCode;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -125,7 +125,7 @@
         {
             "name": "CostCenter.ExternalId",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_costAllocation_costCenterCode;\r\n    employmentValue = sourceContract.employment_costAllocation_costCenterCode;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_costAllocation_costCenterCode;\r\n    let employmentValue = sourceContract.employment_costAllocation_costCenterCode;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -133,7 +133,7 @@
         {
             "name": "CostCenter.Name",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_costAllocation_costCenterName;\r\n    employmentValue = sourceContract.employment_costAllocation_costCenterName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_costAllocation_costCenterName;\r\n    let employmentValue = sourceContract.employment_costAllocation_costCenterName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -141,7 +141,7 @@
         {
             "name": "Department.DisplayName",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_organizationUnit_fullName;\r\n    employmentValue = sourceContract.employment_organizationUnit_fullName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_organizationUnit_fullName;\r\n    let employmentValue = sourceContract.employment_organizationUnit_fullName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -149,7 +149,7 @@
         {
             "name": "Department.ExternalId",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_organizationUnit_shortName;\r\n    employmentValue = sourceContract.employment_organizationUnit_shortName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_organizationUnit_shortName;\r\n    let employmentValue = sourceContract.employment_organizationUnit_shortName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -157,7 +157,23 @@
         {
             "name": "Details.HoursPerWeek",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_workingAmount;\r\n    employmentValue = sourceContract.employment_workingAmount;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue.amountOfWork;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue.amountOfWork;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_workingAmount;\r\n    let employmentValue = sourceContract.employment_workingAmount;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue.amountOfWork;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue.amountOfWork;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Employer.Code",
+            "mode": "field",
+            "value": "employment_payrollClientCode",
+            "validation": {
+                "required": false
+            }
+        },
+        {
+            "name": "Employer.ExternalId",
+            "mode": "field",
+            "value": "employment_payrollClientCode",
             "validation": {
                 "required": false
             }
@@ -165,7 +181,7 @@
         {
             "name": "EndDate",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    endDate = ''\r\n    assignmentValue = sourceContract.assignment_endDate;\r\n    employmentValue = sourceContract.employment_dischargeDate;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        endDate = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        endDate = employmentValue;\r\n    }\r\n\r\n    if(endDate == '9999-12-31'){\r\n        returnValue = null;\r\n    } else {\r\n        returnValue = endDate;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let endDate = ''\r\n    let assignmentValue = sourceContract.assignment_endDate;\r\n    let employmentValue = sourceContract.employment_dischargeDate;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        endDate = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        endDate = employmentValue;\r\n    }\r\n\r\n    if(endDate == '9999-12-31'){\r\n        returnValue = null;\r\n    } else {\r\n        returnValue = endDate;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -173,9 +189,9 @@
         {
             "name": "ExternalId",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_id;\r\n    employmentValue = sourceContract.employment_id;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_id;\r\n    let employmentValue = sourceContract.employment_id;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
-                "required": false
+                "required": true
             }
         },
         {
@@ -197,15 +213,15 @@
         {
             "name": "StartDate",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_startDate;\r\n    employmentValue = sourceContract.employment_hireDate;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_startDate;\r\n    let employmentValue = sourceContract.employment_hireDate;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
-                "required": false
+                "required": true
             }
         },
         {
             "name": "Title.Code",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_jobProfile_shortName;\r\n    employmentValue = sourceContract.employment_jobProfile_shortName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_jobProfile_shortName;\r\n    let employmentValue = sourceContract.employment_jobProfile_shortName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -213,7 +229,7 @@
         {
             "name": "Title.ExternalId",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_jobProfile_id;\r\n    employmentValue = sourceContract.employment_jobProfile_id;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_jobProfile_id;\r\n    let employmentValue = sourceContract.employment_jobProfile_id;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
@@ -221,7 +237,7 @@
         {
             "name": "Title.Name",
             "mode": "complex",
-            "value": "function getValue(){\r\n    returnValue = null;\r\n\r\n    assignmentValue = sourceContract.assignment_jobProfile_fullName;\r\n    employmentValue = sourceContract.employment_jobProfile_fullName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
+            "value": "function getValue(){\r\n    let returnValue = null;\r\n\r\n    let assignmentValue = sourceContract.assignment_jobProfile_fullName;\r\n    let employmentValue = sourceContract.employment_jobProfile_fullName;\r\n    // if assignment value not availble, fall back to employment value\r\n    if (typeof assignmentValue !== 'undefined' && assignmentValue) {\r\n        returnValue = assignmentValue;\r\n    } else if (typeof employmentValue !== 'undefined' && employmentValue) {\r\n        returnValue = employmentValue;\r\n    }\r\n\r\n    return returnValue;\r\n}\r\n\r\ngetValue();",
             "validation": {
                 "required": false
             }
