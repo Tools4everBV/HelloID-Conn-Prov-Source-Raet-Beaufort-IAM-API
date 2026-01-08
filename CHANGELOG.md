@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [3.0.1] - 08-12-2025
+
+### Added
+
+- Added `Employer.Code` and `Employer.ExternalId` fields to `mapping.assignments.includePersonsWithoutAssignments.json`.
+
+### Changed
+
+- Added proper variable scoping using `let` keyword in all complex contract mapping functions in `mapping.assignments.includePersonsWithoutAssignments.json` to prevent global variable pollution.
+- Set `Contract.ExternalId` as a required field in `mapping.assignments.includePersonsWithoutAssignments.json`.
+- Set `Contract.StartDate` as a required field in `mapping.assignments.includePersonsWithoutAssignments.json`.
+
 ## [3.0.0] - 21-07-2025
 
 ### ⚠️ BREAKING CHANGE
