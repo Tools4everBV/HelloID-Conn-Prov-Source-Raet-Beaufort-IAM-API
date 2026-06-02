@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [3.0.2] - 02-06-2026
+
+### Changed
+
+- Added check to prevent null objects to be returned as part of Invoke-RaetWebRequestList
+
 ## [3.0.1] - 08-12-2025
 
 ### Added
