@@ -592,7 +592,13 @@ try {
     $persons | ForEach-Object {
         # Set required fields for HelloID
         $_.ExternalId = $_.personCode
-        $_.DisplayName = "$($_.knownAs) $($_.lastNameAtBirth) ($($_.ExternalId))"
+        
+        if([String]::IsNullOrEmpty($_.lastNamePrefix)){
+            $_.DisplayName = "$($_.knownAs) $($_.lastName) ($($_.ExternalId))"
+        }
+        else{
+            $_.DisplayName = "$($_.knownAs) $($_.lastNamePrefix) $($_.lastName) ($($_.ExternalId))"
+        }
 
         # Add comma separated list with all departments person is manager of
         $personRoleAssignments = $null
