@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. The format 
 ### Changed
 
 - Added check to prevent null objects to be returned as part of Invoke-RaetWebRequestList
+- Update Displayname formatting to match naming convention
 
 ## [3.0.1] - 08-12-2025
 
