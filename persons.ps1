@@ -218,7 +218,7 @@ function Invoke-RaetWebRequestList {
                 [void]$ReturnValue.AddRange($resultObjects)
             }
             else {
-                if($resultObjects -ne $null){
+                if ($resultObjects -ne $null) {
                     [void]$ReturnValue.Add($resultObjects)
                 }
             }
@@ -593,10 +593,10 @@ try {
         # Set required fields for HelloID
         $_.ExternalId = $_.personCode
         
-        if([String]::IsNullOrEmpty($_.lastNamePrefix)){
+        if ([String]::IsNullOrWhiteSpace($_.lastNamePrefix)) {
             $_.DisplayName = "$($_.knownAs) $($_.lastName) ($($_.ExternalId))"
         }
-        else{
+        else {
             $_.DisplayName = "$($_.knownAs) $($_.lastNamePrefix) $($_.lastName) ($($_.ExternalId))"
         }
 
