@@ -218,7 +218,9 @@ function Invoke-RaetWebRequestList {
                 [void]$ReturnValue.AddRange($resultObjects)
             }
             else {
-                [void]$ReturnValue.Add($resultObjects)
+                if ($resultObjects -ne $null) {
+                    [void]$ReturnValue.Add($resultObjects)
+                }
             }
 
             # Wait for 0,601 seconds  - RAET IAM API allows a maximum of 100 requests a minute (https://community.visma.com/t5/Kennisbank-Youforce-API/API-Status-amp-Policy/ta-p/428099#toc-hId-339419904:~:text=3-,Spike%20arrest%20policy%20(max%20number%20of%20API%20calls%20per%20minute),100%20calls%20per%20minute,-*For%20the%20base).
@@ -590,7 +592,13 @@ try {
     $persons | ForEach-Object {
         # Set required fields for HelloID
         $_.ExternalId = $_.personCode
-        $_.DisplayName = "$($_.knownAs) $($_.lastNameAtBirth) ($($_.ExternalId))"
+        
+        if ([String]::IsNullOrWhiteSpace($_.lastNamePrefix)) {
+            $_.DisplayName = "$($_.knownAs) $($_.lastName) ($($_.ExternalId))"
+        }
+        else {
+            $_.DisplayName = "$($_.knownAs) $($_.lastNamePrefix) $($_.lastName) ($($_.ExternalId))"
+        }
 
         # Add comma separated list with all departments person is manager of
         $personRoleAssignments = $null
